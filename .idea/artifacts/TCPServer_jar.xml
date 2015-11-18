@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="TCPServer:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/TCPServer_jar</output-path>
+    <root id="archive" name="part2.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/src/MANIF/server/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="part3" />
+    </root>
+  </artifact>
+</component>

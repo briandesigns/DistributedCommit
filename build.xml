@@ -1,0 +1,45 @@
+<project>
+    <target name="run-flight">
+        <java jar="out/artifacts/TCPServer_jar/part2.jar" fork="true">
+            <arg value="FLIGHT_RM"/>
+            <ARG value="8081"/>
+        </java>
+    </target>
+
+    <target name="run-car">
+        <java jar="out/artifacts/TCPServer_jar/part2.jar" fork="true">
+            <arg value="CAR_RM"/>
+            <ARG value="8082"/>
+        </java>
+    </target>
+
+    <target name="run-room">
+        <java jar="out/artifacts/TCPServer_jar/part2.jar" fork="true">
+            <arg value="ROOM_RM"/>
+            <ARG value="8083"/>
+        </java>
+    </target>
+
+    <target name="run-middleware">
+        <java jar="out/artifacts/TCPServer_jar/part2.jar" fork="true">
+            <arg value="MIDDLEWARE"/>
+            <ARG value="8080"/>
+        </java>
+    </target>
+
+    <target name="run-client">
+        <java jar="out/artifacts/Client_jar/part2.jar" fork="true">
+            <arg value="localhost"/>
+            <ARG value="8080"/>
+        </java>
+    </target>
+
+    <target name="run">
+        <antcall target="run-flight"/>
+        <antcall target="run-car"/>
+        <atncall target="run-room"/>
+        <antcall target="run-middleware"/>
+        <antcall target="run-client"/>
+        <antcall target="run-client"/>
+    </target>
+</project>
