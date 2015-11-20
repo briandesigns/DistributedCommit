@@ -1,6 +1,7 @@
 package ResourceManager;
 
 import LockManager.LockManager;
+import Persistance.DiskOperator;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -32,11 +33,14 @@ public class TCPServer implements Runnable {
 
     public static LockManager lm;
 
+    private static DiskOperator dw;
+
 
 
     public TCPServer(String serverType, int port) {
         this.serverPort = port;
         this.serverType = serverType;
+        dw = new DiskOperator();
         if (serverType.equals(MIDDLEWARE)) {
             readRMAddresses();
             lm = new LockManager();
@@ -47,8 +51,7 @@ public class TCPServer implements Runnable {
         String line;
         BufferedReader br = null;
         try {
-            String path = TCPServer.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-            path = new File(path).getParent();
+            String path = dw.getJarDirectoryPath();
             path = path + "/RMList.txt";
             File file = new File(path);
             rmAddresses = new String[6];

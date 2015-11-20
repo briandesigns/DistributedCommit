@@ -1246,6 +1246,8 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
         return false;
     }
 
+
+
     public int getInt(Object temp) throws Exception {
         try {
             return new Integer(temp.toString());
