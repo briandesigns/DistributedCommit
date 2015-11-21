@@ -175,14 +175,193 @@ public class TransactionManager implements ResourceManager {
 
     public boolean commit() {
         stopTTLCountDown();
-        setInTransaction(false);
-        transactionTable.remove(this.currentActiveTransactionID);
-        this.undoStack = new ArrayList<String>();
-        this.customers = new ArrayList<Customer>();
-        TCPServer.lm.UnlockAll(this.currentActiveTransactionID);
-        currentActiveTransactionID = UNUSED_TRANSACTION_ID;
-        return true;
+        boolean[] involvedRMs = TransactionManager.transactionTable.get(getCurrentActiveTransactionID());
+        final boolean[] flightReady = {true};
+        final boolean[] carReady = {true};
+        final boolean[] roomReady = {true};
+        for(int i = 0; i<4; i++) {
+            if (involvedRMs[i] == true) {
+                switch(i) {
+                    case 0:
+                        myMWRunnable.toFlight.println("cancommit");
+
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (myMWRunnable.fromFlight.readLine().contains("yes")) {
+                                        flightReady[0] = true;
+                                    } else {
+                                        flightReady[0] = false;
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                        break;
+                    case 1:
+                        myMWRunnable.toCar.println("cancommit");
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (myMWRunnable.fromFlight.readLine().contains("yes")) {
+                                        carReady[0] = true;
+                                    } else {
+                                        carReady[0] = false;
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                        break;
+                    case 2:
+                        myMWRunnable.toRoom.println("cancommit");
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    if (myMWRunnable.fromFlight.readLine().contains("yes")) {
+                                        roomReady[0] = true;
+                                    } else {
+                                        roomReady[0] = false;
+                                    }
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                        break;
+                    case 3:
+                        //todo get mw ready to commit changes of Customer HashTable, set customerReady[0]=true
+                        break;
+                }
+            }
+        }
+        //votes true
+        if(flightReady[0] && carReady[0] && roomReady[0]) {
+            for(int i = 0; i<4;i++) {
+                if (involvedRMs[i] == true ) {
+                    switch (i) {
+                        case 0:
+                            myMWRunnable.toFlight.println("docommit");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if(myMWRunnable.fromFlight.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 1:
+                            myMWRunnable.toCar.println("docommit");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (myMWRunnable.fromCar.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 2:
+                            myMWRunnable.toRoom.println("docommit");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (myMWRunnable.fromRoom.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 3:
+
+                    }
+                }
+            }
+            setInTransaction(false);
+            transactionTable.remove(this.currentActiveTransactionID);
+            this.undoStack = new ArrayList<String>();
+            this.customers = new ArrayList<Customer>();
+            TCPServer.lm.UnlockAll(this.currentActiveTransactionID);
+            currentActiveTransactionID = UNUSED_TRANSACTION_ID;
+            return true;
+        } else {
+            for(int i = 0; i<4;i++) {
+                if (involvedRMs[i] == true ) {
+                    switch (i) {
+                        case 0:
+                            myMWRunnable.toFlight.println("abort");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if(myMWRunnable.fromFlight.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 1:
+                            myMWRunnable.toCar.println("abort");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (myMWRunnable.fromCar.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 2:
+                            myMWRunnable.toRoom.println("abort");
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        if (myMWRunnable.fromRoom.readLine().contains("true")) {
+
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                            break;
+                        case 3:
+
+                    }
+                }
+            }
+            abort();
+            return false;
+        }
     }
+
+    //todo: implement no failure 2pc on RM's
 
     @Override
     public boolean addFlight(int id, int flightNumber, int numSeats, int flightPrice) {

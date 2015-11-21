@@ -33,14 +33,14 @@ public class TCPServer implements Runnable {
 
     public static LockManager lm;
 
-    private static DiskOperator dw;
+    public static DiskOperator diskOperator;
 
 
 
     public TCPServer(String serverType, int port) {
         this.serverPort = port;
         this.serverType = serverType;
-        dw = new DiskOperator();
+        diskOperator = new DiskOperator();
         if (serverType.equals(MIDDLEWARE)) {
             readRMAddresses();
             lm = new LockManager();
@@ -51,7 +51,7 @@ public class TCPServer implements Runnable {
         String line;
         BufferedReader br = null;
         try {
-            String path = dw.getJarDirectoryPath();
+            String path = diskOperator.getJarDirectoryPath();
             path = path + "/RMList.txt";
             File file = new File(path);
             rmAddresses = new String[6];

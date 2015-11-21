@@ -8,6 +8,8 @@ import java.io.*;
 /**
  * Created by brian on 20/11/15.
  */
+
+//todo: how does data persistence work exactly?
 public class DiskOperator {
     public void writeDataToDisk(RMHashtable table, String fileName) throws IOException {
         String path = getJarDirectoryPath();

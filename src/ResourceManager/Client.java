@@ -629,6 +629,34 @@ public class Client {
                         e.printStackTrace();
                     }
                     break;
+                case 26:
+                    if (arguments.size() != 1) {
+                        wrongNumber();
+                        break;
+                    }
+                    try {
+                        toMW.println("savedata");
+                        System.out.println(fromMW.readLine());
+                    } catch (NullPointerException e1) {
+                        System.out.println("REQUEST FAILED: MW and RMs unavailable");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case 27:
+                    if (arguments.size() != 1) {
+                        wrongNumber();
+                        break;
+                    }
+                    try {
+                        toMW.println("loaddata");
+                        System.out.println(fromMW.readLine());
+                    } catch (NullPointerException e1) {
+                        System.out.println("REQUEST FAILED: MW and RMs unavailable");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
 
                 case 66:
                     toMW.println("shutdown");
@@ -712,6 +740,10 @@ public class Client {
             return 24;
         else if (argument.compareToIgnoreCase("commit") == 0)
             return 25;
+        else if (argument.compareToIgnoreCase("savedata") == 0)
+            return 26;
+        else if (argument.compareToIgnoreCase("loaddata") == 0)
+            return 27;
         else if (argument.compareToIgnoreCase("shutdown") == 0)
             return 66;
         else
