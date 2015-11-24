@@ -929,7 +929,7 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
                 String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
                 String.valueOf(Math.round(Math.random() * 100 + 1)));
         try {
-            TCPServer.lm.Lock(id, "customer-"+customerId,LockManager.WRITE);
+            TCPServer.lm.Lock(id, "customer-" + customerId, LockManager.WRITE);
         } catch (DeadlockException e) {
             e.printStackTrace();
             tm.abort();
@@ -1039,7 +1039,7 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
         }
     }
 
-    public boolean getLockforCustomer(int id, int customerId) {
+    public boolean getLockForCustomer(int id, int customerId) {
         Customer cust = (Customer) readData(id, Customer.getKey(customerId));
         if (cust == null) {
             return false;

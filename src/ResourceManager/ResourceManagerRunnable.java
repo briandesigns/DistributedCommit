@@ -321,6 +321,36 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             if (success) toClient.println("true");
                             else toClient.println("false");
                             break;
+                        case 34:
+                            if (cmdWords.length != 1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            success = getReady(Integer.parseInt(cmdWords[1]));
+                            if (success) toClient.println("yes");
+                            else {
+                                toClient.println("no");
+                                doAbort(Integer.parseInt(cmdWords[1]));
+                            }
+                            break;
+                        case 35:
+                            if (cmdWords.length !=1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            success = doCommit(Integer.parseInt(cmdWords[1]));
+                            if (success) toClient.println("true");
+                            else toClient.println("false");
+                            break;
+                        case 36:
+                            if(cmdWords.length != 1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            success = doAbort(Integer.parseInt(cmdWords[1]));
+                            if (success) toClient.println("true");
+                            else toClient.println("false");
+                            break;
                         case 66:
                             System.exit(0);
                         default:
@@ -407,6 +437,12 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice = 32;
         else if (cmdWords[0].compareToIgnoreCase("decreasereservableitemcount") == 0)
             choice = 33;
+        else if (cmdWords[0].compareToIgnoreCase("cancommit") == 0)
+            choice = 34;
+        else if (cmdWords[0].compareToIgnoreCase("docommit") == 0)
+            choice = 35;
+        else if (cmdWords[0].compareToIgnoreCase("doabort") == 0)
+            choice = 36;
         else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0 )
             choice = 66;
         else
@@ -961,4 +997,18 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         return true;
     }
 
+    //todo: implement get ready to commit
+    public boolean getReady(int id) {
+        return true;
+    }
+
+    //todo: implement commit
+    public boolean doCommit(int id) {
+        return true;
+    }
+
+    //todo: implement abort
+    public boolean doAbort(int id) {
+        return true;
+    }
 }

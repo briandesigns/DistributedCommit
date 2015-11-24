@@ -100,7 +100,6 @@ public class TPHashTable {
      * @param xobj
      * @return
      */
-    //todo: remove based on Xid only?
     public synchronized boolean remove(XObj xobj) {
         if (xobj == null) return false;
 

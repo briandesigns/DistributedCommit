@@ -71,17 +71,6 @@ public class LockManager {
 
 
 
-//                            TrxnObj trxnObj1 = (TrxnObj) trxnObj.clone();
-//                            trxnObj1.setLockType(LockManager.READ);
-//                            //todo: does this actually remove it?
-//                            lockTable.remove(trxnObj1);
-//                            lockTable.add(trxnObj);
-//
-//                            DataObj dataObj1 = (DataObj) dataObj.clone();
-//                            dataObj1.setLockType(LockManager.READ);
-//                            //todo: does this actually remove it?
-//                            lockTable.remove(dataObj1);
-//                            lockTable.add(dataObj);
                             Vector vect = this.lockTable.elements(dataObj);
                             for(int i = 0; i<vect.size(); i++) {
                                 DataObj dataObj1 = (DataObj)(vect.elementAt(i));
