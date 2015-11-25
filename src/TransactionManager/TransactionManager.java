@@ -25,10 +25,10 @@ public class TransactionManager implements ResourceManager {
     public static final String FLIGHT = "flight-";
     public static final String ROOM = "room-";
     public static final String CUSTOMER = "customer-";
-    private RMHashtable t_itemHT_customer;
-    private RMHashtable t_itemHT_flight;
-    private RMHashtable t_itemHT_car;
-    private RMHashtable t_itemHT_room;
+    public RMHashtable t_itemHT_customer;
+    public RMHashtable t_itemHT_flight;
+    public RMHashtable t_itemHT_car;
+    public RMHashtable t_itemHT_room;
 
 
     {
@@ -196,7 +196,7 @@ public class TransactionManager implements ResourceManager {
             return myMWRunnable.undoDeleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]));
         } else if (line.toLowerCase().contains("deletecustomer")) {
             String[] cmdWords = line.split(",");
-            return myMWRunnable.deleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]));
+            return myMWRunnable.deleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]), );
         } else {
             return false;
         }
@@ -433,7 +433,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, FLIGHT + flightNumber, LockManager.WRITE)) {
-                Trace.error("Could not get Lock on flight item");
                 return false;
             }
 
@@ -481,7 +480,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, FLIGHT + flightNumber, LockManager.WRITE)) {
-                Trace.error("Could not get Lock on flight item");
                 return false;
             }
             Flight localFlight = (Flight) readData(id, Flight.getKey(flightNumber));
@@ -527,7 +525,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, FLIGHT + flightNumber, LockManager.READ)) {
-                Trace.error("Could not get Lock on flight item");
                 return -2;
             }
             Flight localFlight = (Flight) readData(id, Flight.getKey(flightNumber));
@@ -555,7 +552,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, FLIGHT + flightNumber, LockManager.READ)) {
-                Trace.error("Could not get Lock on flight item");
                 return -2;
             }
             Flight localFlight = (Flight) readData(id, Flight.getKey(flightNumber));
@@ -583,7 +579,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, CAR + location, LockManager.WRITE)) {
-                Trace.error("Could not get Lock on car item");
                 return false;
             }
             Car localCar = (Car) readData(id, Car.getKey(location));
@@ -627,7 +622,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, CAR + location, LockManager.WRITE)) {
-                Trace.error("Could not get Lock on car item");
                 return false;
             }
             Car localCar = (Car) readData(id, Car.getKey(location));
@@ -673,7 +667,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, CAR + location, LockManager.READ)) {
-                Trace.error("Could not get Lock on car item");
                 return -2;
             }
             Car localCar = (Car) readData(id, Car.getKey(location));
@@ -701,7 +694,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, CAR + location, LockManager.READ)) {
-                Trace.error("Could not get lock on car item");
                 return -2;
             }
             Car localCar = (Car) readData(id, Car.getKey(location));
@@ -729,7 +721,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, ROOM + location, LockManager.WRITE)) {
-                Trace.error("Could not get lock on room item");
                 return false;
             }
 
@@ -775,7 +766,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!TCPServer.lm.Lock(id, ROOM + location, LockManager.WRITE)) {
-                Trace.error("Could not get lock on room item");
                 return false;
             }
             Room localRoom = (Room) readData(id, Room.getKey(location));
@@ -821,7 +811,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, ROOM + location, LockManager.READ)) {
-                Trace.error("Could not get lock on room item");
                 return -2;
             }
             Room localRoom = (Room) readData(id, Room.getKey(location));
@@ -849,7 +838,6 @@ public class TransactionManager implements ResourceManager {
                 return -3;
             }
             if (!TCPServer.lm.Lock(id, ROOM + location, LockManager.READ)) {
-                Trace.error("Could not get lock on room item");
                 return -2;
             }
             Room localRoom = (Room) readData(id, Room.getKey(location));
@@ -882,7 +870,6 @@ public class TransactionManager implements ResourceManager {
                     String.valueOf(Calendar.getInstance().get(Calendar.MILLISECOND)) +
                     String.valueOf(Math.round(Math.random() * 100 + 1)));
             if (!TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.WRITE)) {
-                Trace.error("Could not get lock on customer item");
                 return -2;
             }
 
@@ -934,7 +921,6 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.WRITE))) {
-                Trace.error("Could not get lock on customer item");
                 return false;
             }
             Customer localCustomer = (Customer) readData(id, CUSTOMER + customerId);
@@ -975,57 +961,178 @@ public class TransactionManager implements ResourceManager {
         }
     }
 
-    //todo: get each reservedItem from customer and get lock on them and then put them in local tables, increase decrease number/count, set localCustomer reservaationsTable to null
     @Override
     public boolean deleteCustomer(int id, int customerId) {
         try {
             renewTTLCountDown();
             if (this.currentActiveTransactionID != id) {
-                System.out.println("transaction id does not match current transaction, command ignored");
+                Trace.error("transaction id does not match current transaction, command ignored");
                 return false;
             }
             if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.WRITE))) {
                 return false;
             }
-            if (!myMWRunnable.getLockForCustomer(id, customerId)) return false;
 
-            Customer cust = ((Customer) myMWRunnable.readData(id, Customer.getKey(customerId)));
-            if (cust == null) {
-                System.out.println("customer does not exist. failed to delete customer");
+            Customer localCustomer = (Customer) readData(id, Customer.getKey(customerId));
+            if (localCustomer == null) {
+                Customer memoryCustomer = (Customer) myMWRunnable.readData(id, Customer.getKey(customerId));
+                if (memoryCustomer == null) {
+                    Trace.error("customer does not exist, failed to perform deleteCustomer");
+                    return false;
+                } else {
+                    localCustomer = memoryCustomer.clone();
+                    addLocalItem(id, localCustomer.getKey(), 0, 0, 0, localCustomer);
+                    if (!updateReservations(id, localCustomer)) {
+                        Trace.error("failed to update reservations. Failed to deleteCustomer");
+                        return false;
+                    }
+                }
+            }
+            if (!getLockOnReservedItems(id, localCustomer)) {
+                Trace.error("could not get lock on customer reservedItems");
                 return false;
             }
-            customers.add(cust);
-            String cmdWords = "undoDeleteCustomer" + "," + id + "," + customerId;
-            undoStack.add(cmdWords);
-            return myMWRunnable.deleteCustomer(id, customerId);
+            localCustomer.clearReservations();
+            Trace.info("successfully updated reservations and performed deleteCustomer");
+            return true;
         } catch (DeadlockException e) {
             e.printStackTrace();
             abort();
+            Trace.error("Deadlock on deleteCustomer");
             return false;
         }
     }
 
+    public boolean getLockOnReservedItems(int id, Customer localCustomer) {
+        boolean success = true;
+        RMHashtable reservationHT = localCustomer.getReservations();
+        for (Enumeration e = reservationHT.keys(); e.hasMoreElements(); ) {
+            String reservedKey = (String) (e.nextElement());
+            ReservedItem reservedItem = localCustomer.getReservedItem(reservedKey);
+            try {
+                if (reservedItem.getKey().contains(FLIGHT)) {
+                    if (!TCPServer.lm.Lock(id, reservedItem.getKey(), LockManager.WRITE)) success = false;
+                } else if (reservedItem.getKey().contains(CAR)) {
+                    if (!TCPServer.lm.Lock(id, reservedItem.getKey(), LockManager.WRITE)) success = false;
+                } else if (reservedItem.getKey().contains(ROOM)) {
+                    if (!TCPServer.lm.Lock(id, reservedItem.getKey(), LockManager.WRITE)) success = false;
+                } else {
+                    Trace.error("reserved item does not exist");
+                    return false;
+                }
+                return success;
+            } catch (DeadlockException e1) {
+                abort();
+                e1.printStackTrace();
+                Trace.error("Deadlock on getLockOnReservedItems");
+                return false;
+            }
+        }
+        return success;
+    }
+
+    private boolean updateReservations(int id, Customer localCustomer) {
+        boolean reservableItemUpdated = true;
+        // Increase the reserved numbers of all reservable items that
+        // the customer reserved.
+        RMHashtable reservationHT = localCustomer.getReservations();
+        for (Enumeration e = reservationHT.keys(); e.hasMoreElements(); ) {
+            String reservedKey = (String) (e.nextElement());
+            ReservedItem reservedItem = localCustomer.getReservedItem(reservedKey);
+            if(!increaseReservableItemCount(id, reservedItem.getKey(), reservedItem.getCount())) reservableItemUpdated = false;
+        }
+        return reservableItemUpdated;
+    }
+    //todo: for each method check that it knows how to handle the case where there is a delete and localCopy got count or reservations set to -1 or null or something
 
     @Override
     public String queryCustomerInfo(int id, int customerId) {
         try {
             renewTTLCountDown();
-            if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.READ))) {
-                return "can't get customer Info";
-            }
             if (this.currentActiveTransactionID != id) {
-                System.out.println("transaction id does not match current transaction, command ignored");
-                TCPServer.lm.UnlockAll(id);
+                Trace.error("transaction id does not match current transaction, command ignored");
                 return "transaction ID does not match current transaction, command ignored";
             }
-            return myMWRunnable.queryCustomerInfo(id, customerId);
+            if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.READ))) {
+                return "can't get customer Info since can't get lock";
+            }
+            Customer localCustomer = (Customer) readData(id, Customer.getKey(customerId));
+            if(localCustomer == null) {
+                return myMWRunnable.queryCustomerInfo(id, customerId);
+            } else {
+                if (localCustomer.gotDeleted())  {
+                    return "customer does not exist";
+                } else {
+                    return localCustomer.printBill();
+                }
+            }
         } catch (DeadlockException e) {
             e.printStackTrace();
             abort();
+            Trace.error("Deadlock on queryCustomerInfo");
             return "can't get customer Info";
         }
     }
 
+    //todo: clean this up
+    protected boolean reserveItem(int id, int customerId,
+                                  String key, String location) throws Exception {
+        Trace.info("RM::reserveItem(" + id + ", " + customerId + ", "
+                + key + ", " + location + ") called.");
+        // Read customer object if it exists (and read lock it).
+        Customer cust = (Customer) readData(id, Customer.getKey(customerId));
+        if (cust == null) {
+            Trace.warn("RM::reserveItem(" + id + ", " + customerId + ", "
+                    + key + ", " + location + ") failed: customer doesn't exist.");
+            return false;
+        }
+        //Check for item availability and getting price
+        boolean isSuccessfulReservation = false;
+        int itemPrice = -1;
+        if (key.contains("car-")) {
+            toCar.println("reserveCar," + id + "," + customerId + "," + location);
+            if (fromCar.readLine().contains("true")) {
+                isSuccessfulReservation = true;
+                toCar.println("queryCarsPrice," + id + "," + location);
+                itemPrice = Integer.parseInt(fromCar.readLine());
+            }
+        } else if (key.contains("flight-")) {
+            toFlight.println("reserveFlight," + id + "," + customerId + "," + location);
+            if (fromFlight.readLine().contains("true")) {
+                isSuccessfulReservation = true;
+                toFlight.println("queryFlightPrice," + id + "," + location);
+                itemPrice = Integer.parseInt(fromFlight.readLine());
+            }
+        } else if (key.contains("room-")) {
+            toRoom.println("reserveRoom," + id + "," + customerId + "," + location);
+            if (fromRoom.readLine().contains("true")) {
+                isSuccessfulReservation = true;
+                toRoom.println("queryRoomsPrice," + id + "," + location);
+                itemPrice = Integer.parseInt(fromRoom.readLine());
+            }
+        } else {
+            throw new Exception("can't reserve this");
+        }
+        // Check if the item is available.
+        if (!isSuccessfulReservation) {
+            Trace.warn("RM::reserveItem(" + id + ", " + customerId + ", "
+                    + key + ", " + location + ") failed: item doesn't exist or no more items.");
+            return false;
+        } else {
+            // Do reservation.
+
+            cust.reserve(key, location, itemPrice);
+            //this should be redundant code
+            writeData(id, cust.getKey(), cust);
+
+            Trace.warn("RM::reserveItem(" + id + ", " + customerId + ", "
+                    + key + ", " + location + ") OK.");
+            return true;
+        }
+    }
+
+
+    //todo: call reserveItem above
     @Override
     public boolean reserveFlight(int id, int customerId, int flightNumber) {
         try {
@@ -1034,11 +1141,10 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             if (this.currentActiveTransactionID != id) {
-                System.out.println("transaction id does not match current transaction, command ignored");
-                TCPServer.lm.UnlockAll(id);
-
+                Trace.error("transaction id does not match current transaction, command ignored");
                 return false;
             }
+
             if (myMWRunnable.reserveFlight(id, customerId, flightNumber)) {
                 undoStack.add("unreserveItem" + "," + id + "," + customerId + "," + Flight.getKey(flightNumber) + "," + flightNumber);
                 return true;
@@ -1096,7 +1202,8 @@ public class TransactionManager implements ResourceManager {
     }
 
     @Override
-    public boolean reserveItinerary(int id, int customerId, Vector flightNumbers, String location, boolean car, boolean room) {
+    public boolean reserveItinerary(int id, int customerId, Vector flightNumbers, String location, boolean car,
+                                    boolean room) {
         try {
             renewTTLCountDown();
             if (!(
@@ -1174,8 +1281,63 @@ public class TransactionManager implements ResourceManager {
         }
     }
 
-    @Override
     public boolean increaseReservableItemCount(int id, String key, int count) {
-        return false;
+        ReservableItem item = (ReservableItem) readData(id, key);
+        if (item == null) {
+            if (key.contains(FLIGHT)) {
+                if (myMWRunnable.isExistingFlight(id, Integer.parseInt(key.replace(FLIGHT, "")))) {
+                    addLocalItem(id, key, myMWRunnable.queryFlight(id, Integer.parseInt(key.replace(FLIGHT, ""))), myMWRunnable.queryFlightPrice(id, Integer.parseInt(key.replace(FLIGHT, ""))), myMWRunnable.queryFlightReserved(id, Integer.parseInt(key.replace(FLIGHT, ""))), null);
+                    Flight localFlight = (Flight) readData(id, key);
+                    localFlight.setReserved(localFlight.getReserved() - count);
+                    localFlight.setCount(localFlight.getCount() + count);
+                    return true;
+                } else {
+                    Trace.error("flight item does not exist, cannot increase item Count");
+                    return false;
+                }
+            } else if (key.contains(CAR)) {
+                if (myMWRunnable.isExistingCars(id, key.replace(CAR, ""))) {
+                    addLocalItem(id, key, myMWRunnable.queryCars(id, key.replace(CAR, "")), myMWRunnable.queryCarsPrice(id, key.replace(CAR, "")), myMWRunnable.queryCarsReserved(id, key.replace(CAR, "")), null);
+                    Car localCar = (Car) readData(id, key);
+                    localCar.setReserved(localCar.getReserved() - count);
+                    localCar.setCount(localCar.getCount() + count);
+                    return true;
+                } else {
+                    Trace.error("car item does not exist, cannot increase item Count");
+                    return false;
+                }
+            } else if (key.contains(ROOM)) {
+                if (myMWRunnable.isExistingRooms(id, key.replace(ROOM, ""))) {
+                    addLocalItem(id, key, myMWRunnable.queryRooms(id, key.replace(ROOM, "")), myMWRunnable.queryRoomsPrice(id, key.replace(ROOM, "")), myMWRunnable.queryRoomsReserved(id, key.replace(ROOM, "")), null);
+                    Room localRoom = (Room) readData(id, key);
+                    localRoom.setReserved(localRoom.getReserved() - count);
+                    localRoom.setCount(localRoom.getCount() + count);
+                    return true;
+                } else {
+                    Trace.info("room item does not exist, cannot increase item Count");
+                    return false;
+                }
+            }
+        } else {
+            item.setReserved(item.getReserved() - count);
+            item.setCount(item.getCount() + count);
+            Trace.info("item reserved: " + item.getReserved() + "    item count: " + item.getCount());
+            return true;
+        }
+        return true;
+    }
+
+    public boolean decreaseReservableItemCount(int id, String key, int count) {
+        ReservableItem item =
+                (ReservableItem) readData(id, key);
+        if (item == null) {
+            Trace.info("no such item, cannot increase count");
+            return false;
+        }
+        item.setReserved(item.getReserved() + count);
+        item.setCount(item.getCount() - count);
+        Trace.info("item reserved: " + item.getReserved() + "    item count: " + item.getCount());
+
+        return true;
     }
 }
