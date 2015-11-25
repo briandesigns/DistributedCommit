@@ -523,7 +523,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         return value;
     }
 
-    // Reserve an item.
+    // update count and reserved
     protected boolean reserveItem(int id, int customerId,
                                   String key, String location) {
         Trace.info("RM::reserveItem(" + id + ", " + customerId + ", "
