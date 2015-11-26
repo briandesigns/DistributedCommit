@@ -577,7 +577,7 @@ public class Client {
                         boolean c = fromMW.readLine().contains("true");
                         System.out.println("new customer id: " + customer);
                         if (c) Trace.info("MW newCustomerId successful");
-                        else Trace.info("MW newCustomerId unsuccessful");
+                        else Trace.error("MW newCustomerId failed");
                     } catch (NullPointerException e1) {
                         System.out.println("REQUEST FAILED: MW and RMs unavailable");
                     } catch (Exception e) {

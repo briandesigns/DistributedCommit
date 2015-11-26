@@ -196,7 +196,7 @@ public class TransactionManager implements ResourceManager {
             return myMWRunnable.undoDeleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]));
         } else if (line.toLowerCase().contains("deletecustomer")) {
             String[] cmdWords = line.split(",");
-            return myMWRunnable.deleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]), );
+            return myMWRunnable.deleteCustomer(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]));
         } else {
             return false;
         }
@@ -486,7 +486,7 @@ public class TransactionManager implements ResourceManager {
             if (localFlight == null) {
                 if (myMWRunnable.isExistingFlight(id, flightNumber)) {
                     if (myMWRunnable.queryFlightReserved(id, flightNumber) == 0)
-                        addLocalItem(id, FLIGHT + flightNumber, -1, myMWRunnable.queryFlightPrice(id, flightNumber), myMWRunnable.queryFlightReserved(id, flightNumber), null);
+                        addLocalItem(id, FLIGHT + flightNumber, -1, -1, myMWRunnable.queryFlightReserved(id, flightNumber), null);
                     else {
                         addLocalItem(id, FLIGHT + flightNumber, myMWRunnable.queryFlight(id, flightNumber), myMWRunnable.queryFlightPrice(id, flightNumber), myMWRunnable.queryFlightReserved(id, flightNumber), null);
                         Trace.error("cannot delete flight due to existing reservations held by Customers");
@@ -497,7 +497,13 @@ public class TransactionManager implements ResourceManager {
                     return false;
                 }
             } else {
-                localFlight.setCount(-1);
+                if (localFlight.getReserved() == 0) {
+                    localFlight.setCount(-1);
+                    localFlight.setPrice(-1);
+                } else {
+                    Trace.error("flight cannot be deleted due to existing reservations held by customers");
+                    return false;
+                }
             }
             boolean[] involvedRMs = transactionTable.get(id);
             if (involvedRMs == null) {
@@ -628,7 +634,7 @@ public class TransactionManager implements ResourceManager {
             if (localCar == null) {
                 if (myMWRunnable.isExistingCars(id, location)) {
                     if (myMWRunnable.queryCarsReserved(id, location) == 0)
-                        addLocalItem(id, CAR + location, -1, myMWRunnable.queryCarsPrice(id, location), myMWRunnable.queryCarsReserved(id, location), null);
+                        addLocalItem(id, CAR + location, -1, -1, myMWRunnable.queryCarsReserved(id, location), null);
                     else {
                         addLocalItem(id, CAR + location, myMWRunnable.queryCars(id, location), myMWRunnable.queryCarsPrice(id, location), myMWRunnable.queryCarsReserved(id, location), null);
                         Trace.error("cannot delete car due to existing reservations held by Customers");
@@ -639,7 +645,13 @@ public class TransactionManager implements ResourceManager {
                     return false;
                 }
             } else {
-                localCar.setCount(-1);
+                if (localCar.getReserved() == 0) {
+                    localCar.setCount(-1);
+                    localCar.setPrice(-1);
+                } else {
+                    Trace.error("cannot delete car due to existing reservations held by Customers");
+                    return false;
+                }
             }
             boolean[] involvedRMs = transactionTable.get(id);
             if (involvedRMs == null) {
@@ -772,7 +784,7 @@ public class TransactionManager implements ResourceManager {
             if (localRoom == null) {
                 if (myMWRunnable.isExistingRooms(id, location)) {
                     if (myMWRunnable.queryRoomsReserved(id, location) == 0)
-                        addLocalItem(id, ROOM + location, -1, myMWRunnable.queryRoomsPrice(id, location), myMWRunnable.queryRoomsReserved(id, location), null);
+                        addLocalItem(id, ROOM + location, -1, -1, myMWRunnable.queryRoomsReserved(id, location), null);
                     else {
                         addLocalItem(id, ROOM + location, myMWRunnable.queryRooms(id, location), myMWRunnable.queryRoomsPrice(id, location), myMWRunnable.queryRoomsReserved(id, location), null);
                         Trace.error("cannot delete room due to existing reservations held by Customers");
@@ -783,7 +795,13 @@ public class TransactionManager implements ResourceManager {
                     return false;
                 }
             } else {
-                localRoom.setCount(-1);
+                if (localRoom.getReserved() == 0) {
+                    localRoom.setCount(-1);
+                    localRoom.setPrice(-1);
+                } else {
+                    Trace.error("cannot delete room, room does not exist");
+                    return false;
+                }
             }
             boolean[] involvedRMs = transactionTable.get(id);
             if (involvedRMs == null) {
@@ -985,6 +1003,12 @@ public class TransactionManager implements ResourceManager {
 
                 }
             }
+
+            if (localCustomer.gotDeleted()) {
+                Trace.error("customer does not exist. Cannot delete it");
+                return false;
+            }
+
             if (!getLockOnReservedItems(id, localCustomer)) {
                 Trace.error("could not get lock on customer reservedItems");
                 return false;
@@ -1094,6 +1118,11 @@ public class TransactionManager implements ResourceManager {
             }
         }
 
+        if (localCustomer.getReservations() == null) {
+            Trace.error("customer does not exist, failed to perform reserveItem");
+            return false;
+        }
+
         //Check for item availability and getting price
         boolean isSuccessfulReservation = false;
         int itemPrice = -1;
@@ -1140,9 +1169,14 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
 
-            boolean success = reserveItem(id,customerId, Flight.getKey(flightNumber), String.valueOf(flightNumber));
-
-            return success;
+            boolean success = reserveItem(id, customerId, Flight.getKey(flightNumber), String.valueOf(flightNumber));
+            if (success) {
+                Trace.info("successfully performed reserveFlight");
+                return true;
+            } else {
+                Trace.error("failed to perform reserveFlight");
+                return false;
+            }
         } catch (DeadlockException e) {
             abort();
             return false;
@@ -1152,6 +1186,7 @@ public class TransactionManager implements ResourceManager {
             return false;
         }
     }
+
 
     @Override
     public boolean reserveCar(int id, int customerId, String location) {
@@ -1166,7 +1201,7 @@ public class TransactionManager implements ResourceManager {
             if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.WRITE) && TCPServer.lm.Lock(id, CAR + location, LockManager.WRITE))) {
                 return false;
             }
-            boolean success = reserveItem(id,customerId, Car.getKey(location), location);
+            boolean success = reserveItem(id, customerId, Car.getKey(location), location);
 
             return success;
         } catch (DeadlockException e) {
@@ -1192,7 +1227,7 @@ public class TransactionManager implements ResourceManager {
             if (!(TCPServer.lm.Lock(id, CUSTOMER + customerId, LockManager.WRITE) && TCPServer.lm.Lock(id, ROOM + location, LockManager.WRITE))) {
                 return false;
             }
-            boolean success = reserveItem(id,customerId, Room.getKey(location), location);
+            boolean success = reserveItem(id, customerId, Room.getKey(location), location);
 
             return success;
         } catch (DeadlockException e) {
@@ -1208,12 +1243,11 @@ public class TransactionManager implements ResourceManager {
     @Override
     public boolean reserveItinerary(int id, int customerId, Vector flightNumbers, String location, boolean car,
                                     boolean room) {
+
         try {
             renewTTLCountDown();
             if (this.currentActiveTransactionID != id) {
-                System.out.println("transaction id does not match current transaction, command ignored");
-                TCPServer.lm.UnlockAll(id);
-
+                Trace.error("transaction id does not match current transaction, command ignored");
                 return false;
             }
             if (!(
@@ -1237,51 +1271,125 @@ public class TransactionManager implements ResourceManager {
             }
             if (!flightSuccess) return false;
 
+            Customer localCustomer = (Customer) readData(id, Customer.getKey(customerId));
+            if (localCustomer == null) {
+                Customer memoryCustomer = (Customer) myMWRunnable.readData(id, Customer.getKey(customerId));
+                if (memoryCustomer == null) {
+                    Trace.error("customer does not exist, failed to perform deleteCustomer");
+                    return false;
+                } else {
+                    localCustomer = memoryCustomer.clone();
+                    addLocalItem(id, localCustomer.getKey(), 0, 0, 0, localCustomer);
 
+                }
+            }
+            if (localCustomer.gotDeleted()) {
+                Trace.error("customer does not exist, cannot performReserveitinerary");
+                return false;
+            }
 
-            int undoCmdCount = 0;
+            Customer backupCustomer = localCustomer.clone();
+            ArrayList<Flight> backupFlights = new ArrayList<Flight>();
+            Car backupCar = null;
+            Room backupRoom = null;
             boolean allSuccessfulReservation = true;
 
             Iterator it2 = flightNumbers.iterator();
-            while (it.hasNext()) {
+            System.out.println("got here");
+
+            while (it2.hasNext()) {
                 try {
                     Object oFlightNumber = it2.next();
-                    if (myMWRunnable.reserveFlight(id, customerId, myMWRunnable.getInt(oFlightNumber))) {
-                        undoStack.add("unreserveItem" + "," + id + "," + customerId + "," + Flight.getKey(myMWRunnable.getInt(oFlightNumber)) + "," + myMWRunnable.getInt(oFlightNumber));
-                        undoCmdCount++;
+                    System.out.println("got here and flightNumber is: " + myMWRunnable.getInt(oFlightNumber));
+
+
+                    Flight localFlight = (Flight) readData(id, FLIGHT + myMWRunnable.getInt(oFlightNumber));
+
+                    if (localFlight == null) {
+                        if (myMWRunnable.isExistingFlight(id, myMWRunnable.getInt(oFlightNumber))) {
+                            addLocalItem(id, FLIGHT + myMWRunnable.getInt(oFlightNumber), myMWRunnable.queryFlight(id, myMWRunnable.getInt(oFlightNumber)), myMWRunnable.queryFlightPrice(id, myMWRunnable.getInt(oFlightNumber)), myMWRunnable.queryFlightReserved(id, myMWRunnable.getInt(oFlightNumber)), null);
+                        } else {
+                            allSuccessfulReservation = false;
+                        }
                     } else {
-                        allSuccessfulReservation = false;
+                        if (localFlight.getCount() == -1) {
+                            allSuccessfulReservation = false;
+                        } else {
+                            Flight backupFlight = new Flight(myMWRunnable.getInt(oFlightNumber), localFlight.getCount(), localFlight.getPrice());
+                            backupFlight.setReserved(localFlight.getReserved());
+                            backupFlights.add(backupFlight);
+                            if (!reserveFlight(id, customerId, myMWRunnable.getInt(oFlightNumber))) {
+                                Trace.error("failed to reserve flight");
+                                allSuccessfulReservation = false;
+                            }
+                        }
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
             if (car) {
-                if (myMWRunnable.reserveCar(id, customerId, location)) {
-                    undoStack.add("unreserveItem" + "," + id + "," + customerId + "," + Car.getKey(location) + "," + location);
-                    undoCmdCount++;
-                } else allSuccessfulReservation = false;
+                Car localCar = (Car) readData(id, Car.getKey(location));
+                if (localCar == null) {
+                    if (myMWRunnable.isExistingCars(id, location)) {
+                        addLocalItem(id, CAR + location, myMWRunnable.queryCars(id, location), queryCarsPrice(id, location), myMWRunnable.queryCarsReserved(id, location), null);
+                    } else {
+                        allSuccessfulReservation = false;
+                    }
+                } else {
+                    if (localCar.getCount() == -1) {
+                        allSuccessfulReservation = false;
+                    } else {
+                        backupCar = new Car(location, localCar.getCount(), localCar.getPrice());
+                        if(!reserveCar(id, customerId, location)) {
+                            allSuccessfulReservation = false;
+                        }
+                    }
+
+                }
             }
             if (room) {
-                if (myMWRunnable.reserveRoom(id, customerId, location)) {
-                    undoStack.add("unreserveItem" + "," + id + "," + customerId + "," + Room.getKey(location) + "," + location);
-                    undoCmdCount++;
-                } else allSuccessfulReservation = false;
+                Room localRoom = (Room) readData(id, Room.getKey(location));
+                if (localRoom == null) {
+                    if (myMWRunnable.isExistingRooms(id, location)) {
+                        addLocalItem(id, ROOM + location, myMWRunnable.queryRooms(id, location), queryRoomsPrice(id, location), myMWRunnable.queryRoomsReserved(id, location), null);
+                    } else {
+                        allSuccessfulReservation = false;
+                    }
+                } else {
+                    if (localRoom.getCount() == -1) {
+                        allSuccessfulReservation = false;
+                    } else {
+                        backupRoom = new Room(location, localRoom.getCount(), localRoom.getPrice());
+                        if(!reserveRoom(id, customerId, location)) {
+                            allSuccessfulReservation = false;
+                        }
+                    }
+
+                }
             }
 
             if (allSuccessfulReservation) {
+                Trace.info("successfully performed reserveItinerary");
                 return true;
             } else {
-                int stopIndex = undoStack.size() - undoCmdCount;
-                for (int i = undoStack.size() - 1; i >= stopIndex; i--) {
-                    executeUndoLine(undoStack.get(i));
-                    undoStack.remove(i);
+                for(int i = 0; i<backupFlights.size(); i++) {
+                    t_itemHT_flight.put(backupFlights.get(i).getKey(), backupFlights.get(i));
                 }
+                if(backupCar != null) {
+                    t_itemHT_car.put(backupCar.getKey(), backupCar);
+                }
+                if(backupRoom != null) {
+                    t_itemHT_room.put(backupRoom.getKey(), backupRoom);
+                }
+                t_itemHT_customer.put(backupCustomer.getKey(), backupCustomer);
+                Trace.error("One of the items in itinerary could not be reserved, itinerary cancelled");
                 return false;
             }
 
         } catch (DeadlockException e) {
             abort();
+            Trace.error("Deadlock on reserveItinerary");
             return false;
         }
     }
@@ -1324,6 +1432,10 @@ public class TransactionManager implements ResourceManager {
                 }
             }
         } else {
+            if (item.getCount() == -1) {
+                Trace.error("item does not exist, failed to increaseReservableItemCount");
+                return false;
+            }
             item.setReserved(item.getReserved() - count);
             item.setCount(item.getCount() + count);
             Trace.info("item reserved: " + item.getReserved() + "    item count: " + item.getCount());
@@ -1340,8 +1452,8 @@ public class TransactionManager implements ResourceManager {
                     addLocalItem(id, key, myMWRunnable.queryFlight(id, Integer.parseInt(key.replace(FLIGHT, ""))), myMWRunnable.queryFlightPrice(id, Integer.parseInt(key.replace(FLIGHT, ""))), myMWRunnable.queryFlightReserved(id, Integer.parseInt(key.replace(FLIGHT, ""))), null);
                     Flight localFlight = (Flight) readData(id, key);
                     if (localFlight.getCount() >= count) {
-                        localFlight.setReserved(localFlight.getReserved() - count);
-                        localFlight.setCount(localFlight.getCount() + count);
+                        localFlight.setReserved(localFlight.getReserved() + count);
+                        localFlight.setCount(localFlight.getCount() - count);
                         return true;
                     } else {
                         Trace.error("Flights fully booked, cannot make reservation");
@@ -1390,6 +1502,9 @@ public class TransactionManager implements ResourceManager {
                 item.setCount(item.getCount() - count);
                 Trace.info("item reserved: " + item.getReserved() + "    item count: " + item.getCount());
                 return true;
+            } else if (item.getCount() == -1) {
+                Trace.error("item does not exist, failed to perform reserveItem");
+                return false;
             } else {
                 Trace.error(key.replace("-", "") + " fully booked, cannot make reservation");
                 return false;
