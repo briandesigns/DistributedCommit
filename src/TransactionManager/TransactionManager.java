@@ -1295,19 +1295,25 @@ public class TransactionManager implements ResourceManager {
             boolean allSuccessfulReservation = true;
 
             Iterator it2 = flightNumbers.iterator();
-            System.out.println("got here");
+
 
             while (it2.hasNext()) {
                 try {
                     Object oFlightNumber = it2.next();
-                    System.out.println("got here and flightNumber is: " + myMWRunnable.getInt(oFlightNumber));
-
 
                     Flight localFlight = (Flight) readData(id, FLIGHT + myMWRunnable.getInt(oFlightNumber));
 
                     if (localFlight == null) {
                         if (myMWRunnable.isExistingFlight(id, myMWRunnable.getInt(oFlightNumber))) {
                             addLocalItem(id, FLIGHT + myMWRunnable.getInt(oFlightNumber), myMWRunnable.queryFlight(id, myMWRunnable.getInt(oFlightNumber)), myMWRunnable.queryFlightPrice(id, myMWRunnable.getInt(oFlightNumber)), myMWRunnable.queryFlightReserved(id, myMWRunnable.getInt(oFlightNumber)), null);
+                            localFlight = (Flight) readData(id, FLIGHT + myMWRunnable.getInt(oFlightNumber));
+                            Flight backupFlight = new Flight(myMWRunnable.getInt(oFlightNumber), localFlight.getCount(), localFlight.getPrice());
+                            backupFlight.setReserved(localFlight.getReserved());
+                            backupFlights.add(backupFlight);
+                            if (!reserveFlight(id, customerId, myMWRunnable.getInt(oFlightNumber))) {
+                                Trace.error("failed to reserve flight");
+                                allSuccessfulReservation = false;
+                            }
                         } else {
                             allSuccessfulReservation = false;
                         }
@@ -1333,6 +1339,12 @@ public class TransactionManager implements ResourceManager {
                 if (localCar == null) {
                     if (myMWRunnable.isExistingCars(id, location)) {
                         addLocalItem(id, CAR + location, myMWRunnable.queryCars(id, location), queryCarsPrice(id, location), myMWRunnable.queryCarsReserved(id, location), null);
+                        localCar = (Car) readData(id, Car.getKey(location));
+                        backupCar = new Car(location, localCar.getCount(), localCar.getPrice());
+                        backupCar.setReserved(localCar.getReserved());
+                        if (!reserveCar(id, customerId, location)) {
+                            allSuccessfulReservation = false;
+                        }
                     } else {
                         allSuccessfulReservation = false;
                     }
@@ -1341,7 +1353,8 @@ public class TransactionManager implements ResourceManager {
                         allSuccessfulReservation = false;
                     } else {
                         backupCar = new Car(location, localCar.getCount(), localCar.getPrice());
-                        if(!reserveCar(id, customerId, location)) {
+                        backupCar.setReserved(localCar.getReserved());
+                        if (!reserveCar(id, customerId, location)) {
                             allSuccessfulReservation = false;
                         }
                     }
@@ -1353,6 +1366,12 @@ public class TransactionManager implements ResourceManager {
                 if (localRoom == null) {
                     if (myMWRunnable.isExistingRooms(id, location)) {
                         addLocalItem(id, ROOM + location, myMWRunnable.queryRooms(id, location), queryRoomsPrice(id, location), myMWRunnable.queryRoomsReserved(id, location), null);
+                        localRoom = (Room) readData(id, Room.getKey(location));
+                        backupRoom = new Room(location, localRoom.getCount(), localRoom.getPrice());
+                        backupRoom.setReserved(localRoom.getReserved());
+                        if (!reserveRoom(id, customerId, location)) {
+                            allSuccessfulReservation = false;
+                        }
                     } else {
                         allSuccessfulReservation = false;
                     }
@@ -1361,7 +1380,8 @@ public class TransactionManager implements ResourceManager {
                         allSuccessfulReservation = false;
                     } else {
                         backupRoom = new Room(location, localRoom.getCount(), localRoom.getPrice());
-                        if(!reserveRoom(id, customerId, location)) {
+                        backupRoom.setReserved(localRoom.getReserved());
+                        if (!reserveRoom(id, customerId, location)) {
                             allSuccessfulReservation = false;
                         }
                     }
