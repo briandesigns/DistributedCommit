@@ -2,6 +2,7 @@ package Persistance;
 
 import ResourceManager.RMHashtable;
 import ResourceManager.TCPServer;
+import ResourceManager.Trace;
 
 import java.io.*;
 
@@ -9,7 +10,6 @@ import java.io.*;
  * Created by brian on 20/11/15.
  */
 
-//todo: how does data persistence work exactly?
 public class DiskOperator {
     public void writeDataToDisk(RMHashtable table, String fileName) throws IOException {
         String path = getJarDirectoryPath();
@@ -18,7 +18,7 @@ public class DiskOperator {
         ObjectOutputStream objectToFile = new ObjectOutputStream(toFile);
         objectToFile.writeObject(table);
         objectToFile.close();
-        System.out.println("data writen to file:" + path);
+        System.out.println("data written to file:" + path);
     }
 
     public Object getDataFromDisk(String fileName) throws IOException, ClassNotFoundException {
@@ -35,5 +35,57 @@ public class DiskOperator {
         String path = TCPServer.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         path = new File(path).getParent();
         return path;
+    }
+
+    public String readMasterRecord() {
+        String path = getJarDirectoryPath();
+        path = path + "/master.log";
+        File masterRecord = new File(path);
+        if(!masterRecord.exists()) {
+            try {
+                masterRecord.createNewFile();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        } else {
+
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(masterRecord);
+                byte[] data = new byte[(int) masterRecord.length()];
+                fis.read(data);
+                fis.close();
+                String str = new String(data, "UTF-8");
+                return str;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return "";
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+    }
+
+    public boolean writeMasterRecord(String record) {
+        String path = getJarDirectoryPath();
+        path = path + "/master.log";
+        File masterRecord = new File(path);
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter(masterRecord);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            Trace.error("could not writeMasterRecord");
+            return false;
+        }
+        writer.println(record);
+        writer.close();
+        return true;
     }
 }

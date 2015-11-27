@@ -451,14 +451,14 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
     }
 
     // Write a data item.
-    private void writeData(int id, String key, RMItem value) {
+    public void writeData(int id, String key, RMItem value) {
         synchronized (TCPServer.m_itemHT_customer) {
             TCPServer.m_itemHT_customer.put(key, value);
         }
     }
 
     // Remove the item out of storage.
-    protected RMItem removeData(int id, String key) {
+    public RMItem removeData(int id, String key) {
         synchronized (TCPServer.m_itemHT_customer) {
             return (RMItem) TCPServer.m_itemHT_customer.remove(key);
         }

@@ -309,7 +309,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 toClient.println("ERROR : wrong arguments");
                                 break;
                             }
-                            success = isExistingRooms(Integer.parseInt(cmdWords[1]),(cmdWords[2]));
+                            success = isExistingRooms(Integer.parseInt(cmdWords[1]), (cmdWords[2]));
                             toClient.println(success);
                             break;
                         case 33:
@@ -334,7 +334,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             }
                             break;
                         case 35:
-                            if (cmdWords.length !=1) {
+                            if (cmdWords.length != 1) {
                                 toClient.println("ERROR: wrong arguments");
                                 break;
                             }
@@ -343,13 +343,55 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             else toClient.println("false");
                             break;
                         case 36:
-                            if(cmdWords.length != 1) {
+                            if (cmdWords.length != 1) {
                                 toClient.println("ERROR: wrong arguments");
                                 break;
                             }
                             success = doAbort(Integer.parseInt(cmdWords[1]));
                             if (success) toClient.println("true");
                             else toClient.println("false");
+                            break;
+                        case 63:
+                            if (cmdWords.length != 1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            if (cmdWords[0].contains("a")) {
+                                success = loadMemoryFromDisk("A");
+                            } else if (cmdWords[0].contains("b")) {
+                                success = loadMemoryFromDisk("B");
+                            } else success = false;
+                            if (success) {
+                                toClient.println("true");
+                            } else {
+                                toClient.println("false");
+                            }
+                            break;
+                        case 64:
+                            if (cmdWords.length != 1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            success = false;
+                            if (cmdWords[0].contains("A")) {
+                                success = writeMainMemoryToDisk("A");
+
+                            } else if (cmdWords[0].contains("B")) {
+                                success = writeMainMemoryToDisk("B");
+                            }
+                            if (success) {
+                                toClient.println("true");
+                            } else {
+                                toClient.println("false");
+                            }
+                            break;
+                        case 65:
+                            if (cmdWords.length < 6) {
+                                toClient.println("ERROR : wrong arguments");
+                                break;
+                            }
+                            writeCompleteData(Integer.parseInt(cmdWords[1]), cmdWords[2], Integer.parseInt(cmdWords[3]), Integer.parseInt(cmdWords[4]), Integer.parseInt(cmdWords[5]));
+                            toClient.println("true");
                             break;
                         case 66:
                             System.exit(0);
@@ -366,6 +408,73 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private boolean loadMemoryFromDisk(String shadowVersion) {
+        if (TCPServer.serverType.equals("FLIGHT_RM")) {
+            try {
+                TCPServer.m_itemHT_flight = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("flight"+shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            }
+        } else if (TCPServer.serverType.equals("CAR_RM")) {
+            try {
+                TCPServer.m_itemHT_car= (RMHashtable) TCPServer.diskOperator.getDataFromDisk("car"+shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            }
+        } else if (TCPServer.serverType.equals("ROOM_RM")) {
+            try {
+                TCPServer.m_itemHT_room = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("room"+shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private boolean writeMainMemoryToDisk(String shadowVersion) {
+        if (TCPServer.serverType.equals("FLIGHT_RM")) {
+            try {
+                TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_flight, "flight" + shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        } else if (TCPServer.serverType.equals("CAR_RM")) {
+            try {
+                TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_car, "car" + shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        } else if (TCPServer.serverType.equals("ROOM_RM")) {
+            try {
+                TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_room, "room" + shadowVersion);
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+        return false;
     }
 
     private int findChoice(String[] cmdWords) {
@@ -418,11 +527,11 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         else if (cmdWords[0].compareToIgnoreCase("increasereservableitemcount") == 0)
             choice = 23;
         else if (cmdWords[0].compareToIgnoreCase("undoaddflight") == 0)
-            choice =24;
+            choice = 24;
         else if (cmdWords[0].compareToIgnoreCase("undoaddcars") == 0)
             choice = 25;
         else if (cmdWords[0].compareToIgnoreCase("undoaddrooms") == 0)
-            choice =26;
+            choice = 26;
         else if (cmdWords[0].compareToIgnoreCase("queryflightreserved") == 0)
             choice = 27;
         else if (cmdWords[0].compareToIgnoreCase("querycarsreserved") == 0)
@@ -443,32 +552,62 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice = 35;
         else if (cmdWords[0].compareToIgnoreCase("doabort") == 0)
             choice = 36;
-        else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0 )
+        else if (cmdWords[0].compareToIgnoreCase("aborta") == 0)
+            choice = 63;
+        else if (cmdWords[0].compareToIgnoreCase("abortb") == 0)
+            choice = 63;
+        else if (cmdWords[0].compareToIgnoreCase("writea") == 0)
+            choice = 64;
+        else if (cmdWords[0].compareToIgnoreCase("writeb") == 0)
+            choice = 64;
+        else if (cmdWords[0].compareToIgnoreCase("writecompletedata") == 0)
+            choice = 65;
+        else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0)
             choice = 66;
         else
-        choice = -1;
+            choice = -1;
         return choice;
     }
 
+    private void writeCompleteData(int id, String key,
+                                   int numItem, int price, int numReserved) {
+
+        if (numItem == -1) {
+            removeData(id, key);
+        } else if (key.contains(TransactionManager.FLIGHT)) {
+            Flight newObj = new Flight(Integer.parseInt(key.replace(TransactionManager.FLIGHT, "")), numItem, price);
+            newObj.setReserved(numReserved);
+            writeData(id, key, newObj);
+        } else if (key.contains(TransactionManager.CAR)) {
+            Car newObj = new Car(key.replace(TransactionManager.CAR, ""), numItem, price);
+            newObj.setReserved(numReserved);
+            writeData(id, key, newObj);
+        } else if (key.contains(TransactionManager.ROOM)) {
+            Room newObj = new Room(key.replace(TransactionManager.CAR, ""), numItem, price);
+            newObj.setReserved(numReserved);
+            writeData(id, key, newObj);
+        }
+        Trace.info("data merged: " + key + "," + numItem + "," + price + "," + numReserved);
+    }
 
     // Basic operations on ResourceManager.RMItem //
 
     // Read a data item.
-    private RMItem readData(int id, String key) {
+    public RMItem readData(int id, String key) {
         synchronized (hashTable) {
             return (RMItem) hashTable.get(key);
         }
     }
 
     // Write a data item.
-    private void writeData(int id, String key, RMItem value) {
+    public void writeData(int id, String key, RMItem value) {
         synchronized (hashTable) {
             hashTable.put(key, value);
         }
     }
 
     // Remove the item out of storage.
-    protected RMItem removeData(int id, String key) {
+    public RMItem removeData(int id, String key) {
         synchronized (hashTable) {
             return (RMItem) hashTable.remove(key);
         }
@@ -552,12 +691,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     // ResourceManager.Flight operations //
 
     public boolean isExistingFlight(int id, int flightNumber) {
-        Trace.info("RM::isExistingFlight(" + id + ", " + flightNumber);
+        Trace.info("RM::isExistingFlight(" + id + ", " + flightNumber + ")");
         Flight curObj = (Flight) readData(id, Flight.getKey(flightNumber));
         if (curObj == null) {
             return false;
         } else return true;
     }
+
     // Create a new flight, or add seats to existing flight.
     // Note: if flightPrice <= 0 and the flight already exists, it maintains
     // its current price.
@@ -673,12 +813,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     // ResourceManager.Car operations //
 
     public boolean isExistingCars(int id, String location) {
-        Trace.info("RM::isExistingCars(" + id + ", " + location);
+        Trace.info("RM::isExistingCars(" + id + ", " + location + ")");
         Car curObj = (Car) readData(id, Car.getKey(location));
         if (curObj == null) {
             return false;
         } else return true;
     }
+
     // Create a new car location or add cars to an existing location.
     // Note: if price <= 0 and the car location already exists, it maintains
     // its current price.
@@ -758,12 +899,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     // ResourceManager.Room operations //
 
     public boolean isExistingRooms(int id, String location) {
-        Trace.info("RM::isExistingRooms(" + id + ", " + location);
+        Trace.info("RM::isExistingRooms(" + id + ", " + location + ")");
         Room curObj = (Room) readData(id, Room.getKey(location));
         if (curObj == null) {
             return false;
         } else return true;
     }
+
     // Create a new room location or add rooms to an existing location.
     // Note: if price <= 0 and the room location already exists, it maintains
     // its current price.

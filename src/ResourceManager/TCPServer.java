@@ -14,7 +14,7 @@ import java.net.Socket;
  */
 public class TCPServer implements Runnable {
     int serverPort;
-    String serverType;
+    public static String serverType;
     ServerSocket serverSocket = null;
     boolean isStopped = false;
     Thread runningThread = null;
@@ -44,6 +44,40 @@ public class TCPServer implements Runnable {
         if (serverType.equals(MIDDLEWARE)) {
             readRMAddresses();
             lm = new LockManager();
+        }
+        try {
+            loadPersistentData();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadPersistentData() throws IOException, ClassNotFoundException {
+        String masterRecord = diskOperator.readMasterRecord();
+        if (masterRecord.contains("A")) {
+            if (serverType.equals(MIDDLEWARE)) {
+                m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
+            } else if (serverType.equals(FLIGHT_RM)) {
+                m_itemHT_flight = (RMHashtable) diskOperator.getDataFromDisk("flightA");
+            } else if (serverType.equals(CAR_RM)) {
+                m_itemHT_car = (RMHashtable) diskOperator.getDataFromDisk("carA");
+            } else {
+                m_itemHT_room = (RMHashtable) diskOperator.getDataFromDisk("roomA");
+            }
+        } else if (masterRecord.contains("B")) {
+            if (serverType.equals(MIDDLEWARE)) {
+                m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerB");
+            } else if (serverType.equals(FLIGHT_RM)) {
+                m_itemHT_flight = (RMHashtable) diskOperator.getDataFromDisk("flightB");
+            } else if (serverType.equals(CAR_RM)) {
+                m_itemHT_car = (RMHashtable) diskOperator.getDataFromDisk("carB");
+            } else {
+                m_itemHT_room = (RMHashtable) diskOperator.getDataFromDisk("roomB");
+            }
+        } else if (masterRecord.equals("")) {
+            //do nothing
         }
     }
 
