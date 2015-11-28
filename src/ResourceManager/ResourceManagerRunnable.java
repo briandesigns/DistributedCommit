@@ -62,7 +62,8 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 toClient.println("ERROR : wrong arguments");
                                 break;
                             }
-                            success = addFlight(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]), Integer.parseInt(cmdWords[3]), Integer.parseInt(cmdWords[4]));
+                            success = addFlight(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]),
+                                    Integer.parseInt(cmdWords[3]), Integer.parseInt(cmdWords[4]));
                             if (success) toClient.println("true");
                             else toClient.println("false");
                             break;
@@ -413,7 +414,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     private boolean loadMemoryFromDisk(String shadowVersion) {
         if (TCPServer.serverType.equals("FLIGHT_RM")) {
             try {
-                TCPServer.m_itemHT_flight = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("flight"+shadowVersion);
+                TCPServer.m_itemHT_flight = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("flight" + shadowVersion);
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -424,7 +425,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             }
         } else if (TCPServer.serverType.equals("CAR_RM")) {
             try {
-                TCPServer.m_itemHT_car= (RMHashtable) TCPServer.diskOperator.getDataFromDisk("car"+shadowVersion);
+                TCPServer.m_itemHT_car = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("car" + shadowVersion);
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -435,7 +436,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             }
         } else if (TCPServer.serverType.equals("ROOM_RM")) {
             try {
-                TCPServer.m_itemHT_room = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("room"+shadowVersion);
+                TCPServer.m_itemHT_room = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("room" + shadowVersion);
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();

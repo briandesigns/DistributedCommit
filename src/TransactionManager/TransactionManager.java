@@ -325,12 +325,16 @@ public class TransactionManager implements ResourceManager {
         return success;
     }
 
+
     public boolean commit() {
         try {
             if (!TCPServer.lm.Lock(getCurrentActiveTransactionID(), "GLOBAL_WRITE", LockManager.WRITE)) {
                 return false;
             }
             stopTTLCountDown();
+
+            TCPServer.diskOperator.writeLogRecord()
+
             boolean success = true;
 
             if (!mergeCustomers()) success = false;
@@ -390,6 +394,8 @@ public class TransactionManager implements ResourceManager {
                 e.printStackTrace();
                 abort();
             }
+
+            //todo: append commit record to log on disk ? what is this step?
             boolean success2 = TCPServer.diskOperator.writeMasterRecord(shadowVersion+getCurrentActiveTransactionID());
             if (!success2) {
                 Trace.error("could not write master record. aborting");
@@ -406,7 +412,7 @@ public class TransactionManager implements ResourceManager {
             transactionTable.remove(this.currentActiveTransactionID);
             Trace.info("successfully performed commit");
             currentActiveTransactionID = UNUSED_TRANSACTION_ID;
-            return true;
+            return success2;
         } catch (DeadlockException e) {
             e.printStackTrace();
             Trace.error("Deadlock on commit");

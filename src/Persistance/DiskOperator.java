@@ -88,4 +88,75 @@ public class DiskOperator {
         writer.close();
         return true;
     }
+
+    public boolean clearLogRecord() {
+        String path = getJarDirectoryPath();
+        path = path + "/logRecord.log";
+        File masterRecord = new File(path);
+        PrintWriter writer = null;
+        try {
+            writer = new PrintWriter(masterRecord);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            Trace.error("could not writeMasterRecord");
+            return false;
+        }
+        writer.println("");
+        writer.close();
+        return true;
+    }
+
+    public boolean writeLogRecord(String record) {
+        String path = getJarDirectoryPath();
+        path = path + "/logRecord.log";
+        File masterRecord = new File(path);
+        FileWriter writer = null;
+        BufferedWriter bw = null;
+        try {
+            writer = new FileWriter(masterRecord, true);
+            bw = new BufferedWriter(writer);
+            bw.write(record);
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Trace.error("could not write log to disk");
+            return false;
+        }
+        return true;
+    }
+
+    public String readLogRecord() {
+        String path = getJarDirectoryPath();
+        path = path + "/logRecord.log";
+        File masterRecord = new File(path);
+        if(!masterRecord.exists()) {
+            try {
+                masterRecord.createNewFile();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        } else {
+
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(masterRecord);
+                byte[] data = new byte[(int) masterRecord.length()];
+                fis.read(data);
+                fis.close();
+                String str = new String(data, "UTF-8");
+                return str;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return "";
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+    }
 }

@@ -335,14 +335,6 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
                             toClient.println("transaction successfully committed");
                         } else toClient.println("transaction commit error, transaction aborted");
                         break;
-                    case 26:
-                        success = saveDataToFile("customer");
-                        toClient.println(success);
-                        break;
-                    case 27:
-                        success = loadDatafromFile("customer");
-                        toClient.println(success);
-                        break;
                     case 66:
                         if (TransactionManager.noActiveTransactions()) {
                             toFlight.println("shutdown");
@@ -429,10 +421,6 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
             return 24;
         else if (cmdWords[0].compareToIgnoreCase("commit") == 0)
             return 25;
-        else if (cmdWords[0].compareToIgnoreCase("savedata") == 0)
-            return 26;
-        else if (cmdWords[0].compareToIgnoreCase("loaddata") == 0)
-            return 27;
         else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0)
             return 66;
         else
