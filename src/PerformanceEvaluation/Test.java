@@ -1,11 +1,10 @@
 package PerformanceEvaluation;
 
+import ResourceManager.Trace;
 import TransactionManager.RMTimeOutException;
 
 import java.util.Scanner;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * Created by brian on 11/11/15.
@@ -13,19 +12,31 @@ import java.util.concurrent.Executors;
 public class Test {
     public static void main(String[] args) {
         ExecutorService es = Executors.newSingleThreadExecutor();
-        es.submit(new RMtimouter());
+        Future future = es.submit(new RMtimouter());
+        try {
+            future.get(6000, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            Trace.error("timed out");
+        } finally {
+            es.shutdown();
+        }
+
         System.out.println("hello");
 //        es.shutdownNow();
 
     }
 }
 
-class RMtimouter implements Callable<RMTimeOutException> {
+class RMtimouter implements Callable<Boolean> {
 
     @Override
-    public RMTimeOutException call() throws Exception {
+    public Boolean call() throws Exception {
         Thread.currentThread().sleep(5000);
-        System.out.println("hello");
-        return new RMTimeOutException("hello");
+
+        return true;
     }
 }

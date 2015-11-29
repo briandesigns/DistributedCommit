@@ -346,6 +346,22 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
                             toClient.println("false");
                         }
                         break;
+                    case 67:
+                        if (cmdWords.length != 2) {
+                            toClient.println("ERROR : wrong arguments");
+                            break;
+                        }
+                        if (cmdWords[1].equals("flight")) {
+                            toFlight.println("destruct");
+                        } else if (cmdWords[1].equals("car")) {
+                            toCar.println("destruct");
+                        } else if (cmdWords[1].equals("room")) {
+                            toRoom.println("destruct");
+                        } else if (cmdWords[1].equals("mw")) {
+                            System.exit(0);
+                        } else
+                            ;
+                        break;
                     default:
                         toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
                         break;
@@ -423,6 +439,8 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
             return 25;
         else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0)
             return 66;
+        else if (cmdWords[0].compareToIgnoreCase("crash") == 0)
+            return 67;
         else
             choice = -1;
         return choice;

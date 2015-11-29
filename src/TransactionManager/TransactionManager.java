@@ -10,6 +10,7 @@ import ResourceManager.MiddlewareRunnable;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class TransactionManager implements ResourceManager {
     public static Hashtable<Integer, boolean[]> transactionTable;
@@ -175,9 +176,10 @@ public class TransactionManager implements ResourceManager {
 
     }
 
+    //todo: should it time out here if rm don't respond?
+    //todo: to abort just load the current masterrecord indicated shadow on all nodes
     public boolean abort() {
         stopTTLCountDown();
-        TCPServer.diskOperator.writeLogRecord("ABORT");
         String masterRecord = TCPServer.diskOperator.readMasterRecord();
         if (masterRecord.contains("A")) {
             try {
@@ -218,7 +220,7 @@ public class TransactionManager implements ResourceManager {
         return true;
     }
 
-    private boolean mergeCustomers() {
+    private boolean mergeCustomers(String shadowVersion) {
         Set<String> keys = t_itemHT_customer.keySet();
         for (String key : keys) {
 
@@ -228,103 +230,210 @@ public class TransactionManager implements ResourceManager {
                 myMWRunnable.writeData(getCurrentActiveTransactionID(), key, (RMItem) t_itemHT_customer.get(key));
             }
         }
+        try {
+            TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_customer, "customer" + shadowVersion);
+        } catch (IOException e) {
+            Trace.error("failed to write main memory to disk for MW");
+            return false;
+        }
         return true;
     }
 
-    private boolean mergeFlights() {
-        startRMResponseCountDown("FLIGHT");
-        boolean success = true;
-        Set<String> keys = t_itemHT_flight.keySet();
-        for (String key : keys) {
-            Flight localFlight = (Flight) t_itemHT_flight.get(key);
-            myMWRunnable.toFlight.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key
-                    + "," + localFlight.getCount() + "," + localFlight.getPrice() + "," + localFlight.getReserved());
-            try {
-                if (myMWRunnable.fromFlight.readLine().contains("false")) {
-                    success = false;
-                }
+    private boolean mergeFlights(final String shadowVersion) {
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        Future future = service.submit(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                boolean success = true;
+                Set<String> keys = t_itemHT_flight.keySet();
+                for (String key : keys) {
+                    Flight localFlight = (Flight) t_itemHT_flight.get(key);
+                    myMWRunnable.toFlight.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key
+                            + "," + localFlight.getCount() + "," + localFlight.getPrice() + "," + localFlight.getReserved());
+                    try {
+                        if (myMWRunnable.fromFlight.readLine().contains("false")) {
+                            success = false;
+                        }
 
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to receive response from FLIGHT RM");
-                return false;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Trace.error("failed to receive response from FLIGHT RM");
+                        return false;
+                    }
+                }
+                if (success) {
+                    myMWRunnable.toFlight.println("write" + shadowVersion);
+                    try {
+                        if (myMWRunnable.fromFlight.readLine().contains("false")) {
+                            Trace.error("failed to write memory to disk for Flight RM");
+                            success = false;
+                        }
+                    } catch (IOException e) {
+                        Trace.error("failed to write main memory to disk for Flight RM");
+                        success = false;
+                    }
+                }
+                return success;
             }
+        });
+        try {
+            return (Boolean) future.get(RM_RESPONSE_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+            Trace.error("RM timed out");
+            return false;
+        } finally {
+            service.shutdown();
         }
-        return success;
+        return false;
     }
 
-    private boolean mergeCars() {
-        boolean success = true;
-        Set<String> keys = t_itemHT_car.keySet();
-        for (String key : keys) {
-            Car localCar = (Car) t_itemHT_car.get(key);
-            myMWRunnable.toCar.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key + ","
-                    + localCar.getCount() + "," + localCar.getPrice() + "," + localCar.getReserved());
-            try {
-                if (myMWRunnable.fromCar.readLine().contains("false")) {
-                    success = false;
+    private boolean mergeCars(final String shadowVersion) {
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        Future future = service.submit(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                boolean success = true;
+                Set<String> keys = t_itemHT_car.keySet();
+                for (String key : keys) {
+                    Car localCar = (Car) t_itemHT_car.get(key);
+                    myMWRunnable.toCar.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key + ","
+                            + localCar.getCount() + "," + localCar.getPrice() + "," + localCar.getReserved());
+                    try {
+                        //todo: make all of them like this everwhere
+                        String response = myMWRunnable.fromCar.readLine();
+                        if (response == null) {
+                            Trace.error("response is null, must have timed out");
+                            return false;
+                        }
+                        if (myMWRunnable.fromCar.readLine().contains("false")) {
+                            success = false;
+                        }
+                    } catch (IOException e) {
+                        Trace.error("failed to receive response from CAR RM");
+                        return false;
+                    }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to receive response from CAR RM");
-                return false;
+                if (success) {
+                    myMWRunnable.toCar.println("write" + shadowVersion);
+                    try {
+                        if (myMWRunnable.fromCar.readLine().contains("false")) {
+                            Trace.error("failed to write memory to disk for Flight RM");
+                            success = false;
+                        }
+                    } catch (IOException e) {
+                        Trace.error("failed to write memory to disk for Car RM");
+                        success = false;
+                    }
+                }
+                return success;
             }
+        });
+        try {
+            return (Boolean) future.get(RM_RESPONSE_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+//            e.printStackTrace();
+            Trace.error("execution interrupted");
+            return false;
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            return false;
+        } catch (TimeoutException e) {
+//            e.printStackTrace();
+            Trace.error("RM timed out");
+            return false;
+        } finally {
+            service.shutdown();
+            return false;
         }
-        return success;
     }
 
-    private boolean mergeRooms() {
-        boolean success = true;
-        Set<String> keys = t_itemHT_room.keySet();
-        for (String key : keys) {
-            Room localRoom = (Room) t_itemHT_room.get(key);
-            myMWRunnable.toRoom.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key + ","
-                    + localRoom.getCount() + "," + localRoom.getPrice() + "," + localRoom.getReserved());
-            try {
-                if (myMWRunnable.fromRoom.readLine().contains("false")) {
-                    success = false;
+    private boolean mergeRooms(final String shadowVersion) {
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        Future future = service.submit(new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws Exception {
+                boolean success = true;
+                Set<String> keys = t_itemHT_room.keySet();
+                for (String key : keys) {
+                    Room localRoom = (Room) t_itemHT_room.get(key);
+                    myMWRunnable.toRoom.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key + ","
+                            + localRoom.getCount() + "," + localRoom.getPrice() + "," + localRoom.getReserved());
+                    try {
+                        if (myMWRunnable.fromRoom.readLine().contains("false")) {
+                            success = false;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Trace.error("failed to receive response from ROOM RM");
+                        return false;
+                    }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to receive response from ROOM RM");
-                return false;
+                if (success) {
+                    myMWRunnable.toRoom.println("write" + shadowVersion);
+                    try {
+                        if (myMWRunnable.fromRoom.readLine().contains("false")) {
+                            Trace.error("failed to write memory to disk for Room RM");
+                            success = false;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        success = false;
+                    }
+                }
+                return success;
             }
+        });
+        try {
+            return (Boolean) future.get(RM_RESPONSE_MS, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+            Trace.error("RM timed out");
+            return false;
+        } finally {
+            service.shutdown();
         }
-        return success;
+        return false;
     }
 
 
-    private boolean prepare() {
+    private boolean prepare(final String shadowVersion) {
         final Boolean[] flightReady = {null};
         final Boolean[] carReady = {null};
         final Boolean[] roomReady = {null};
         final Boolean[] customerReady = {null};
-
         new Thread(new Runnable() {
             @Override
             public void run() {
-                flightReady[0] = mergeFlights();
+                flightReady[0] = mergeFlights(shadowVersion);
             }
         }).start();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                carReady[0] = mergeCars();
+                carReady[0] = mergeCars(shadowVersion);
             }
         }).start();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                roomReady[0] = mergeRooms();
+                roomReady[0] = mergeRooms(shadowVersion);
             }
         }).start();
         new Thread(new Runnable() {
             @Override
             public void run() {
-                customerReady[0] = mergeCustomers();
+                customerReady[0] = mergeCustomers(shadowVersion);
             }
         }).start();
-
         while (flightReady[0] == null || carReady[0] == null || roomReady[0] == null || customerReady[0] == null) {
             try {
                 Thread.currentThread().sleep(1000);
@@ -337,6 +446,17 @@ public class TransactionManager implements ResourceManager {
         return success;
     }
 
+    private String getShadowVersion() {
+        String shadowVersion;
+        if (TCPServer.diskOperator.readMasterRecord().contains("A")) {
+            shadowVersion = "B";
+        } else if (TCPServer.diskOperator.readMasterRecord().contains("B")) {
+            shadowVersion = "A";
+        } else {
+            shadowVersion = "A";
+        }
+        return shadowVersion;
+    }
 
     public boolean commit() {
         try {
@@ -344,75 +464,27 @@ public class TransactionManager implements ResourceManager {
                 return false;
             }
             stopTTLCountDown();
+            String shadowVersion = getShadowVersion();
             TCPServer.diskOperator.clearLogRecord();
             TCPServer.diskOperator.writeLogRecord("START,");
 
-            if (!prepare()) {
+            if (!prepare(shadowVersion)) {
                 Trace.error("failed to merge local copy with main memory copy. aborting");
+                TCPServer.diskOperator.writeLogRecord("ABORT");
                 abort();
                 return false;
             }
             TCPServer.diskOperator.writeLogRecord("COMMIT");
-
-            String shadowVersion;
-            if (TCPServer.diskOperator.readMasterRecord().contains("A")) {
-                shadowVersion = "B";
-            } else if (TCPServer.diskOperator.readMasterRecord().contains("B")) {
-                shadowVersion = "A";
-            } else {
-                shadowVersion = "A";
-            }
-
-            try {
-                TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_customer, "customer" + shadowVersion);
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to write main memory to disk for MW");
-                abort();
-            }
-            myMWRunnable.toFlight.println("write" + shadowVersion);
-            try {
-                if (myMWRunnable.fromFlight.readLine().contains("false")) {
-                    Trace.error("failed to write memory to disk for Flight RM");
-                    abort();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to write main memory to disk for Flight RM");
-                abort();
-            }
-            myMWRunnable.toCar.println("write" + shadowVersion);
-            try {
-                if (myMWRunnable.fromCar.readLine().contains("false")) {
-                    Trace.error("failed to write memory to disk for Flight RM");
-                    abort();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Trace.error("failed to write memory to disk for Car RM");
-                abort();
-            }
-            myMWRunnable.toRoom.println("write" + shadowVersion);
-            try {
-                if (myMWRunnable.fromRoom.readLine().contains("false")) {
-                    Trace.error("failed to write memory to disk for Room RM");
-                    abort();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                abort();
-            }
             boolean success2 = TCPServer.diskOperator.writeMasterRecord(shadowVersion + getCurrentActiveTransactionID());
             if (!success2) {
                 Trace.error("could not write master record. aborting");
+                TCPServer.diskOperator.writeLogRecord("ABORT");
                 abort();
             }
-
             t_itemHT_room = new RMHashtable();
             t_itemHT_car = new RMHashtable();
             t_itemHT_flight = new RMHashtable();
             t_itemHT_customer = new RMHashtable();
-
             TCPServer.lm.UnlockAll(this.currentActiveTransactionID);
             setInTransaction(false);
             transactionTable.remove(this.currentActiveTransactionID);
@@ -425,197 +497,9 @@ public class TransactionManager implements ResourceManager {
             abort();
             return false;
         }
-
-//        boolean[] involvedRMs = TransactionManager.transactionTable.get(getCurrentActiveTransactionID());
-//        final boolean[] flightReady = {true};
-//        final boolean[] carReady = {true};
-//        final boolean[] roomReady = {true};
-//        final boolean[] customerReady = {true};
-//        for (int i = 0; i < 4; i++) {
-//            if (involvedRMs[i] == true) {
-//                switch (i) {
-//                    case 0:
-//                        myMWRunnable.toFlight.println("cancommit," + getCurrentActiveTransactionID());
-//
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                try {
-//                                    if (myMWRunnable.fromFlight.readLine().contains("yes")) {
-//                                        flightReady[0] = true;
-//                                    } else {
-//                                        flightReady[0] = false;
-//                                    }
-//                                } catch (IOException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//                 3       }).start();
-//                        break;
-//                    case 1:
-//                        myMWRunnable.toCar.println("cancommit," + getCurrentActiveTransactionID());
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                try {
-//                                    if (myMWRunnable.fromCar.readLine().contains("yes")) {
-//                                        carReady[0] = true;
-//                                    } else {
-//                                        carReady[0] = false;
-//                                    }
-//                                } catch (IOException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//                        }).start();
-//                        break;
-//                    case 2:
-//                        myMWRunnable.toRoom.println("cancommit," + getCurrentActiveTransactionID());
-//                        new Thread(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                try {
-//                                    if (myMWRunnable.fromRoom.readLine().contains("yes")) {
-//                                        roomReady[0] = true;
-//                                    } else {
-//                                        roomReady[0] = false;
-//                                    }
-//                                } catch (IOException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//                        }).start();
-//                        break;
-//                    case 3:
-//                        //todo: check if mw is ready to commit
-//                        customerReady[0] = true;
-//                        customerReady[0] = false;
-//                        break;
-//                }
-//            }
-//    }
-//        //votes true
-//        if (flightReady[0] && carReady[0] && roomReady[0] && customerReady[0]) {
-//            for (int i = 0; i < 4; i++) {
-//                if (involvedRMs[i] == true) {
-//                    switch (i) {
-//                        case 0:
-//                            myMWRunnable.toFlight.println("docommit," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromFlight.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 1:
-//                            myMWRunnable.toCar.println("docommit," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromCar.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 2:
-//                            myMWRunnable.toRoom.println("docommit," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromRoom.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 3:
-//                            //todo: commit locally (write a routine for that)
-//                            break;
-//                    }
-//                }
-//            }
-//            setInTransaction(false);
-//            transactionTable.remove(this.currentActiveTransactionID);
-//            this.customers = new ArrayList<Customer>();
-//            TCPServer.lm.UnlockAll(this.currentActiveTransactionID);
-//            currentActiveTransactionID = UNUSED_TRANSACTION_ID;
-//            return true;
-//        } else {
-//            for (int i = 0; i < 4; i++) {
-//                if (involvedRMs[i] == true) {
-//                    switch (i) {
-//                        case 0:
-//                            myMWRunnable.toFlight.println("doabort," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromFlight.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 1:
-//                            myMWRunnable.toCar.println("doabort," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromCar.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 2:
-//                            myMWRunnable.toRoom.println("doabort," + getCurrentActiveTransactionID());
-//                            new Thread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        if (myMWRunnable.fromRoom.readLine().contains("true")) {
-//
-//                                        }
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }).start();
-//                            break;
-//                        case 3:
-//                            //todo: what to do here? nothing?
-//                    }
-//                }
-//            }
-//            abort();
-//            return false;
-//        }
     }
 
-    //todo: implement no failure 2pc on RM's
+
 
     @Override
     public boolean addFlight(int id, int flightNumber, int numSeats, int flightPrice) {

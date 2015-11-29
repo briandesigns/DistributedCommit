@@ -73,6 +73,7 @@ public class Client {
         System.out.println("ResourceManager.Client Interface");
         System.out.println("Type \"help\" for list of supported commands");
 
+
         while (true) {
 
             try {
@@ -635,12 +636,23 @@ public class Client {
                         if (fromMW.readLine().toLowerCase().contains("true"))
                             System.out.println("Reservation System shutdown successful");
                         else System.out.println("cannot shutdown system due to existing active transactions");
-                        break;
                     } catch (NullPointerException e1) {
                         System.out.println("REQUEST FAILED: MW and RMs unavailable");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                    break;
+                case 67:
+                    if (((String) arguments.elementAt(1)).equalsIgnoreCase("flight") ||
+                            ((String) arguments.elementAt(1)).equalsIgnoreCase("car") ||
+                            ((String) arguments.elementAt(1)).equalsIgnoreCase("room") ||
+                            ((String) arguments.elementAt(1)).equalsIgnoreCase("mw")) {
+                        toMW.println(arguments.elementAt(0) + "," + arguments.elementAt(1));
+                        System.out.println("successfully crashed site " + arguments.elementAt(1));
+                    } else {
+                        System.out.println("unknown site, cannot crash it");
+                    }
+                    break;
                 default:
                     System.out.println("The interface does not support this command.");
                     break;
@@ -713,6 +725,8 @@ public class Client {
             return 25;
         else if (argument.compareToIgnoreCase("shutdown") == 0)
             return 66;
+        else if (argument.compareToIgnoreCase("crash") == 0)
+            return 67;
         else
             return 666;
     }
