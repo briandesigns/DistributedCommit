@@ -21,6 +21,7 @@ public class TransactionManager implements ResourceManager {
     private boolean inTransaction = false;
     private Thread TTLCountDownThread;
     private static final int TTL_MS = 60000;
+    private static final int RM_RESPONSE_MS = 5000;
     public static final String CAR = "car-";
     public static final String FLIGHT = "flight-";
     public static final String ROOM = "room-";
@@ -70,6 +71,26 @@ public class TransactionManager implements ResourceManager {
             }
         });
         TTLCountDownThread.start();
+    }
+
+    private Thread startRMResponseCountDown(final String RMType) {
+        Thread countDown = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.currentThread().sleep(RM_RESPONSE_MS);
+                } catch (InterruptedException e) {
+                    Trace.info("RM responded before time out");
+                }
+            }
+        });
+        countDown.start();
+        return countDown;
+    }
+
+
+    private void stopRMResponseCountDown(Thread countDownThread) {
+        countDownThread.interrupt();
     }
 
 
@@ -155,10 +176,9 @@ public class TransactionManager implements ResourceManager {
     }
 
     public boolean abort() {
-
         stopTTLCountDown();
+        TCPServer.diskOperator.writeLogRecord("ABORT");
         String masterRecord = TCPServer.diskOperator.readMasterRecord();
-        boolean success = true;
         if (masterRecord.contains("A")) {
             try {
                 TCPServer.m_itemHT_customer = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("customerA");
@@ -169,35 +189,9 @@ public class TransactionManager implements ResourceManager {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-
-
             myMWRunnable.toFlight.println("abortA");
-            try {
-                if(myMWRunnable.fromFlight.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
             myMWRunnable.toCar.println("abortA");
-            try {
-                if(myMWRunnable.fromCar.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
             myMWRunnable.toRoom.println("abortA");
-            try {
-                if(myMWRunnable.fromRoom.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
         } else if (masterRecord.contains("B")) {
             try {
                 TCPServer.m_itemHT_customer = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("customerB");
@@ -208,48 +202,20 @@ public class TransactionManager implements ResourceManager {
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
-
-                    success = true;
-
             myMWRunnable.toFlight.println("abortB");
-            try {
-                if(myMWRunnable.fromFlight.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
             myMWRunnable.toCar.println("abortB");
-            try {
-                if(myMWRunnable.fromCar.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
             myMWRunnable.toRoom.println("abortB");
-            try {
-                if(myMWRunnable.fromRoom.readLine().contains("false")) {
-                    success = false;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
-
         t_itemHT_room = new RMHashtable();
         t_itemHT_car = new RMHashtable();
         t_itemHT_flight = new RMHashtable();
         t_itemHT_customer = new RMHashtable();
-
         setInTransaction(false);
         System.out.println("txn: " + this.currentActiveTransactionID + " call ended and undoAll() successful");
         transactionTable.remove(this.currentActiveTransactionID);
         TCPServer.lm.UnlockAll(currentActiveTransactionID);
         currentActiveTransactionID = UNUSED_TRANSACTION_ID;
-        return success;
+        return true;
     }
 
     private boolean mergeCustomers() {
@@ -266,6 +232,7 @@ public class TransactionManager implements ResourceManager {
     }
 
     private boolean mergeFlights() {
+        startRMResponseCountDown("FLIGHT");
         boolean success = true;
         Set<String> keys = t_itemHT_flight.keySet();
         for (String key : keys) {
@@ -276,6 +243,7 @@ public class TransactionManager implements ResourceManager {
                 if (myMWRunnable.fromFlight.readLine().contains("false")) {
                     success = false;
                 }
+
             } catch (IOException e) {
                 e.printStackTrace();
                 Trace.error("failed to receive response from FLIGHT RM");
@@ -326,33 +294,73 @@ public class TransactionManager implements ResourceManager {
     }
 
 
+    private boolean prepare() {
+        final Boolean[] flightReady = {null};
+        final Boolean[] carReady = {null};
+        final Boolean[] roomReady = {null};
+        final Boolean[] customerReady = {null};
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                flightReady[0] = mergeFlights();
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                carReady[0] = mergeCars();
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                roomReady[0] = mergeRooms();
+            }
+        }).start();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                customerReady[0] = mergeCustomers();
+            }
+        }).start();
+
+        while (flightReady[0] == null || carReady[0] == null || roomReady[0] == null || customerReady[0] == null) {
+            try {
+                Thread.currentThread().sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        boolean success = true;
+        if (!flightReady[0] || !carReady[0] || !roomReady[0] || !customerReady[0]) success = false;
+        return success;
+    }
+
+
     public boolean commit() {
         try {
             if (!TCPServer.lm.Lock(getCurrentActiveTransactionID(), "GLOBAL_WRITE", LockManager.WRITE)) {
                 return false;
             }
             stopTTLCountDown();
+            TCPServer.diskOperator.clearLogRecord();
+            TCPServer.diskOperator.writeLogRecord("START,");
 
-            TCPServer.diskOperator.writeLogRecord()
-
-            boolean success = true;
-
-            if (!mergeCustomers()) success = false;
-            if (!mergeFlights()) success = false;
-            if (!mergeCars()) success = false;
-            if (!mergeRooms()) success = false;
-            if (!success) {
+            if (!prepare()) {
                 Trace.error("failed to merge local copy with main memory copy. aborting");
                 abort();
+                return false;
             }
-            String shadowVersion;
+            TCPServer.diskOperator.writeLogRecord("COMMIT");
 
+            String shadowVersion;
             if (TCPServer.diskOperator.readMasterRecord().contains("A")) {
-                    shadowVersion = "B";
+                shadowVersion = "B";
             } else if (TCPServer.diskOperator.readMasterRecord().contains("B")) {
-                    shadowVersion = "A";
+                shadowVersion = "A";
             } else {
-                    shadowVersion = "A";
+                shadowVersion = "A";
             }
 
             try {
@@ -394,9 +402,7 @@ public class TransactionManager implements ResourceManager {
                 e.printStackTrace();
                 abort();
             }
-
-            //todo: append commit record to log on disk ? what is this step?
-            boolean success2 = TCPServer.diskOperator.writeMasterRecord(shadowVersion+getCurrentActiveTransactionID());
+            boolean success2 = TCPServer.diskOperator.writeMasterRecord(shadowVersion + getCurrentActiveTransactionID());
             if (!success2) {
                 Trace.error("could not write master record. aborting");
                 abort();
@@ -444,7 +450,7 @@ public class TransactionManager implements ResourceManager {
 //                                    e.printStackTrace();
 //                                }
 //                            }
-//                        }).start();
+//                 3       }).start();
 //                        break;
 //                    case 1:
 //                        myMWRunnable.toCar.println("cancommit," + getCurrentActiveTransactionID());

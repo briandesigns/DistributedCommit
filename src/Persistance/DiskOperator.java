@@ -93,17 +93,15 @@ public class DiskOperator {
         String path = getJarDirectoryPath();
         path = path + "/logRecord.log";
         File masterRecord = new File(path);
-        PrintWriter writer = null;
+        masterRecord.delete();
         try {
-            writer = new PrintWriter(masterRecord);
-        } catch (FileNotFoundException e) {
+            masterRecord.createNewFile();
+            return true;
+        } catch (IOException e) {
             e.printStackTrace();
-            Trace.error("could not writeMasterRecord");
+            Trace.error("failed to clear logRecord");
             return false;
         }
-        writer.println("");
-        writer.close();
-        return true;
     }
 
     public boolean writeLogRecord(String record) {
