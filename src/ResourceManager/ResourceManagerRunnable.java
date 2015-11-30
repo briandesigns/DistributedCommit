@@ -333,9 +333,9 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 toClient.println("ERROR: wrong arguments");
                                 break;
                             }
-                            if (cmdWords[0].contains("aborta")) {
+                            if (cmdWords[0].contains("abortA")) {
                                 success = loadMemoryFromDisk("A");
-                            } else if (cmdWords[0].contains("abortb")) {
+                            } else if (cmdWords[0].contains("abortB")) {
                                 success = loadMemoryFromDisk("B");
                             } else success = false;
                             if (success) {
@@ -376,22 +376,33 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             break;
                         case 67:
                             if(cmdWords[0].equalsIgnoreCase("commita")) {
-                                success = loadMemoryFromDisk("A");
-                                if (success) {
+//                                success = loadMemoryFromDisk("A");
+//                                if (success) {
                                     TCPServer.diskOperator.writeLogRecord("COMMIT");
                                     toClient.println("true");
-                                } else {
-                                    toClient.println("false");
-                                }
+//                                } else {
+//                                    toClient.println("false");
+//                                }
                             } else if (cmdWords[0].equalsIgnoreCase("commitb")) {
-                                success = loadMemoryFromDisk("B");
-                                if (success) {
+//                                success = loadMemoryFromDisk("B");
+//                                if (success) {
                                     TCPServer.diskOperator.writeLogRecord("COMMIT");
                                     toClient.println("true");
-                                } else {
-                                    toClient.println("false");
-                                }
+//                                } else {
+//                                    toClient.println("false");
+//                                }
                             }
+                            break;
+                        case 68:
+                            if (cmdWords.length != 1) {
+                                toClient.println("ERROR: wrong arguments");
+                                break;
+                            }
+                            if (cmdWords[0].contains("loadA")) {
+                                success = loadMemoryFromDisk("A");
+                            } else if (cmdWords[0].contains("loadB")) {
+                                success = loadMemoryFromDisk("B");
+                            } else success = false;
                             break;
                         default:
                             toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
@@ -412,6 +423,7 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         if (TCPServer.serverType.equals("FLIGHT_RM")) {
             try {
                 TCPServer.m_itemHT_flight = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("flight" + shadowVersion);
+                Trace.info("FLIGHT_RM loaded shadowVersion" + shadowVersion);
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -423,6 +435,8 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         } else if (TCPServer.serverType.equals("CAR_RM")) {
             try {
                 TCPServer.m_itemHT_car = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("car" + shadowVersion);
+                Trace.info("CAR_RM loaded shadowVersion" + shadowVersion);
+
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -434,6 +448,8 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         } else if (TCPServer.serverType.equals("ROOM_RM")) {
             try {
                 TCPServer.m_itemHT_room = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("room" + shadowVersion);
+                Trace.info("ROOM_RM loaded shadowVersion" + shadowVersion);
+
                 return true;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -567,6 +583,10 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice = 67;
         else if (cmdWords[0].compareToIgnoreCase("commitb") == 0)
             choice = 67;
+        else if (cmdWords[0].compareToIgnoreCase("loada") == 0)
+            choice  = 68;
+        else if (cmdWords[0].compareToIgnoreCase("loadb") == 0)
+            choice = 68;
         else
             choice = -1;
         return choice;

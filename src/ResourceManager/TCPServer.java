@@ -4,6 +4,7 @@ import LockManager.LockManager;
 import Persistance.DiskOperator;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -54,32 +55,34 @@ public class TCPServer implements Runnable {
         }
     }
 
+    //todo: implement recovery
+    //todo: figure out why loading after commit mess up the state
     private void loadPersistentData() throws IOException, ClassNotFoundException {
         String masterRecord = diskOperator.readMasterRecord();
-        Trace.info("loaded shadow" + masterRecord);
         if (masterRecord.contains("A")) {
             if (serverType.equals(MIDDLEWARE)) {
+                Trace.info("loaded shadow" + masterRecord);
                 m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
-            } else if (serverType.equals(FLIGHT_RM)) {
-                m_itemHT_flight = (RMHashtable) diskOperator.getDataFromDisk("flightA");
-            } else if (serverType.equals(CAR_RM)) {
-                m_itemHT_car = (RMHashtable) diskOperator.getDataFromDisk("carA");
-            } else {
-                m_itemHT_room = (RMHashtable) diskOperator.getDataFromDisk("roomA");
+                LoaderRunnable loaderRunnable = new LoaderRunnable();
+                loaderRunnable.toFlight.println("loadA");
+                loaderRunnable.toCar.println("loadA");
+                loaderRunnable.toRoom.println("loadA");
+
+
             }
         } else if (masterRecord.contains("B")) {
             if (serverType.equals(MIDDLEWARE)) {
+                Trace.info("loaded shadow" + masterRecord);
                 m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerB");
-            } else if (serverType.equals(FLIGHT_RM)) {
-                m_itemHT_flight = (RMHashtable) diskOperator.getDataFromDisk("flightB");
-            } else if (serverType.equals(CAR_RM)) {
-                m_itemHT_car = (RMHashtable) diskOperator.getDataFromDisk("carB");
-            } else {
-                m_itemHT_room = (RMHashtable) diskOperator.getDataFromDisk("roomB");
+                LoaderRunnable loaderRunnable = new LoaderRunnable();
+                loaderRunnable.toFlight.println("loadB");
+                loaderRunnable.toCar.println("loadB");
+                loaderRunnable.toRoom.println("loadB");
             }
         } else if (masterRecord.equals("")) {
             // no previous record, do nothing
         }
+
     }
 
     private void readRMAddresses() {
