@@ -478,32 +478,32 @@ public class TransactionManager implements ResourceManager {
                 TCPServer.diskOperator.writeLogRecord("ABORT");
                 abort();
             }
-
-            myMWRunnable.toFlight.println("commit" + shadowVersion);
-            try {
-                myMWRunnable.fromFlight.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            myMWRunnable.toCar.println("commit" + shadowVersion);
-            try {
-                myMWRunnable.fromCar.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            myMWRunnable.toRoom.println("commit" + shadowVersion);
-            try {
-                myMWRunnable.fromRoom.readLine();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//
+//            myMWRunnable.toFlight.println("commit" + shadowVersion);
+//            try {
+//                myMWRunnable.fromFlight.readLine();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            myMWRunnable.toCar.println("commit" + shadowVersion);
+//            try {
+//                myMWRunnable.fromCar.readLine();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            myMWRunnable.toRoom.println("commit" + shadowVersion);
+//            try {
+//                myMWRunnable.fromRoom.readLine();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
             System.out.println("GGOOOOOOOOOOOOT HEEEEEEEEEEEEEEEEEEEEEEEEEEEERE");
 
             Trace.info("commit saved to shadow" + shadowVersion);
-            t_itemHT_room = new RMHashtable();
-            t_itemHT_car = new RMHashtable();
-            t_itemHT_flight = new RMHashtable();
-            t_itemHT_customer = new RMHashtable();
+            t_itemHT_room.clear();
+            t_itemHT_car.clear();
+            t_itemHT_flight.clear();
+            t_itemHT_customer.clear();
             TCPServer.lm.UnlockAll(this.currentActiveTransactionID);
             setInTransaction(false);
             transactionTable.remove(this.currentActiveTransactionID);

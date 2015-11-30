@@ -633,8 +633,9 @@ public class Client {
                 case 66:
                     toMW.println("shutdown");
                     try {
-                        if (fromMW.readLine().toLowerCase().contains("shutdown")) {
+                        if (fromMW.readLine().toLowerCase().contains("true")) {
                             System.out.println("Reservation System shutdown successful");
+                            System.exit(0);
                         }
                         else System.out.println("cannot shutdown system due to existing active transactions");
                     } catch (NullPointerException e1) {
