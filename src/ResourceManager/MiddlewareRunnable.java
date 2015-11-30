@@ -49,8 +49,11 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
     private void connectRM() {
         try {
             this.flightSocket = new Socket(TCPServer.rmAddresses[0], Integer.parseInt(TCPServer.rmAddresses[1]));
+
             this.carSocket = new Socket(TCPServer.rmAddresses[2], Integer.parseInt(TCPServer.rmAddresses[3]));
+
             this.roomSocket = new Socket(TCPServer.rmAddresses[4], Integer.parseInt(TCPServer.rmAddresses[5]));
+
         } catch (IOException e) {
             Trace.info("Cannot connect to all 3 mandatory RMs");
         }
@@ -648,10 +651,11 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
         String line = null;
         try {
             line = fromFlight.readLine();
+            Trace.info("line obtained from isExistingFlight: " + line);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return line.equalsIgnoreCase("true");
+        return line.contains("true");
     }
 
     // Create a new flight, or add seats to existing flight.

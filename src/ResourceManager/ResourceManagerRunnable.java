@@ -295,7 +295,9 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 break;
                             }
                             success = isExistingFlight(Integer.parseInt(cmdWords[1]), Integer.parseInt(cmdWords[2]));
-                            toClient.println(success);
+                            if (success) {
+                                toClient.println("trueExistingFlight");
+                            } else toClient.println("false");
                             break;
                         case 31:
                             if (cmdWords.length < 2) {
@@ -303,7 +305,9 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 break;
                             }
                             success = isExistingCars(Integer.parseInt(cmdWords[1]), cmdWords[2]);
-                            toClient.println(success);
+                            if (success) {
+                                toClient.println("true");
+                            } else toClient.println("false");
                             break;
                         case 32:
                             if (cmdWords.length < 2) {
@@ -311,7 +315,9 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 break;
                             }
                             success = isExistingRooms(Integer.parseInt(cmdWords[1]), (cmdWords[2]));
-                            toClient.println(success);
+                            if (success) {
+                                toClient.println("true");
+                            } else toClient.println("false");
                             break;
                         case 33:
                             if (cmdWords.length < 2) {
@@ -322,47 +328,18 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             if (success) toClient.println("true");
                             else toClient.println("false");
                             break;
-                        case 34:
-                            if (cmdWords.length != 1) {
-                                toClient.println("ERROR: wrong arguments");
-                                break;
-                            }
-                            success = getReady(Integer.parseInt(cmdWords[1]));
-                            if (success) toClient.println("yes");
-                            else {
-                                toClient.println("no");
-                                doAbort(Integer.parseInt(cmdWords[1]));
-                            }
-                            break;
-                        case 35:
-                            if (cmdWords.length != 1) {
-                                toClient.println("ERROR: wrong arguments");
-                                break;
-                            }
-                            success = doCommit(Integer.parseInt(cmdWords[1]));
-                            if (success) toClient.println("true");
-                            else toClient.println("false");
-                            break;
-                        case 36:
-                            if (cmdWords.length != 1) {
-                                toClient.println("ERROR: wrong arguments");
-                                break;
-                            }
-                            success = doAbort(Integer.parseInt(cmdWords[1]));
-                            if (success) toClient.println("true");
-                            else toClient.println("false");
-                            break;
                         case 63:
                             if (cmdWords.length != 1) {
                                 toClient.println("ERROR: wrong arguments");
                                 break;
                             }
-                            if (cmdWords[0].contains("a")) {
+                            if (cmdWords[0].contains("aborta")) {
                                 success = loadMemoryFromDisk("A");
-                            } else if (cmdWords[0].contains("b")) {
+                            } else if (cmdWords[0].contains("abortb")) {
                                 success = loadMemoryFromDisk("B");
                             } else success = false;
                             if (success) {
+                                TCPServer.diskOperator.writeLogRecord("ABORT");
                                 toClient.println("true");
                             } else {
                                 toClient.println("false");
@@ -396,6 +373,25 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             break;
                         case 66:
                             System.exit(0);
+                            break;
+                        case 67:
+                            if(cmdWords[0].equalsIgnoreCase("commita")) {
+                                success = loadMemoryFromDisk("A");
+                                if (success) {
+                                    TCPServer.diskOperator.writeLogRecord("COMMIT");
+                                    toClient.println("true");
+                                } else {
+                                    toClient.println("false");
+                                }
+                            } else if (cmdWords[0].equalsIgnoreCase("commitb")) {
+                                success = loadMemoryFromDisk("B");
+                                if (success) {
+                                    TCPServer.diskOperator.writeLogRecord("COMMIT");
+                                    toClient.println("true");
+                                } else {
+                                    toClient.println("false");
+                                }
+                            }
                             break;
                         default:
                             toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
@@ -451,31 +447,36 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     }
 
     private boolean writeMainMemoryToDisk(String shadowVersion) {
+        TCPServer.diskOperator.clearLogRecord();
         if (TCPServer.serverType.equals("FLIGHT_RM")) {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_flight, "flight" + shadowVersion);
+                TCPServer.diskOperator.writeLogRecord("YES,");
                 return true;
             } catch (IOException e) {
-                e.printStackTrace();
+                TCPServer.diskOperator.writeLogRecord("ABORT");
                 return false;
             }
         } else if (TCPServer.serverType.equals("CAR_RM")) {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_car, "car" + shadowVersion);
+                TCPServer.diskOperator.writeLogRecord("YES,");
                 return true;
             } catch (IOException e) {
-                e.printStackTrace();
+                TCPServer.diskOperator.writeLogRecord("ABORT");
                 return false;
             }
         } else if (TCPServer.serverType.equals("ROOM_RM")) {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_room, "room" + shadowVersion);
+                TCPServer.diskOperator.writeLogRecord("YES,");
                 return true;
             } catch (IOException e) {
-                e.printStackTrace();
+                TCPServer.diskOperator.writeLogRecord("ABORT");
                 return false;
             }
         }
+        TCPServer.diskOperator.writeLogRecord("ABORT");
         return false;
     }
 
@@ -548,12 +549,6 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice = 32;
         else if (cmdWords[0].compareToIgnoreCase("decreasereservableitemcount") == 0)
             choice = 33;
-        else if (cmdWords[0].compareToIgnoreCase("cancommit") == 0)
-            choice = 34;
-        else if (cmdWords[0].compareToIgnoreCase("docommit") == 0)
-            choice = 35;
-        else if (cmdWords[0].compareToIgnoreCase("doabort") == 0)
-            choice = 36;
         else if (cmdWords[0].compareToIgnoreCase("aborta") == 0)
             choice = 63;
         else if (cmdWords[0].compareToIgnoreCase("abortb") == 0)
@@ -568,6 +563,10 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice = 66;
         else if (cmdWords[0].compareToIgnoreCase("destruct") == 0)
             choice = 66;
+        else if (cmdWords[0].compareToIgnoreCase("commita") == 0)
+            choice = 67;
+        else if (cmdWords[0].compareToIgnoreCase("commitb") == 0)
+            choice = 67;
         else
             choice = -1;
         return choice;
@@ -575,13 +574,16 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
 
     private void writeCompleteData(int id, String key,
                                    int numItem, int price, int numReserved) {
-
         if (numItem == -1) {
             removeData(id, key);
         } else if (key.contains(TransactionManager.FLIGHT)) {
             Flight newObj = new Flight(Integer.parseInt(key.replace(TransactionManager.FLIGHT, "")), numItem, price);
             newObj.setReserved(numReserved);
             writeData(id, key, newObj);
+            Flight savedData = (Flight) readData(id, key);
+            Trace.info("reading from mainmemory: flight," + savedData.getKey() + ",count:" + savedData.getCount() +
+                    "," +
+                    savedData.getPrice() + ",reserved:" + savedData.getReserved());
         } else if (key.contains(TransactionManager.CAR)) {
             Car newObj = new Car(key.replace(TransactionManager.CAR, ""), numItem, price);
             newObj.setReserved(numReserved);
@@ -1143,18 +1145,4 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
         return true;
     }
 
-    //todo: implement get ready to commit
-    public boolean getReady(int id) {
-        return true;
-    }
-
-    //todo: implement commit
-    public boolean doCommit(int id) {
-        return true;
-    }
-
-    //todo: implement abort
-    public boolean doAbort(int id) {
-        return true;
-    }
 }

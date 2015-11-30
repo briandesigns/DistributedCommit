@@ -633,8 +633,9 @@ public class Client {
                 case 66:
                     toMW.println("shutdown");
                     try {
-                        if (fromMW.readLine().toLowerCase().contains("true"))
+                        if (fromMW.readLine().toLowerCase().contains("shutdown")) {
                             System.out.println("Reservation System shutdown successful");
+                        }
                         else System.out.println("cannot shutdown system due to existing active transactions");
                     } catch (NullPointerException e1) {
                         System.out.println("REQUEST FAILED: MW and RMs unavailable");
@@ -651,8 +652,8 @@ public class Client {
                         System.out.println("successfully crashed site " + arguments.elementAt(1));
                     } else {
                         System.out.println("unknown site, cannot crash it");
-                    }
-                    break;
+
+                    break;}
                 default:
                     System.out.println("The interface does not support this command.");
                     break;

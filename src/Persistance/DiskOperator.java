@@ -41,7 +41,7 @@ public class DiskOperator {
         String path = getJarDirectoryPath();
         path = path + "/master.log";
         File masterRecord = new File(path);
-        if(!masterRecord.exists()) {
+        if (!masterRecord.exists()) {
             try {
                 masterRecord.createNewFile();
                 return "";
@@ -91,7 +91,15 @@ public class DiskOperator {
 
     public boolean clearLogRecord() {
         String path = getJarDirectoryPath();
-        path = path + "/logRecord.log";
+        if (TCPServer.serverType.equals(TCPServer.MIDDLEWARE)) {
+            path = path + "/cord.log";
+        } else if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            path = path + "/flight_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            path = path + "/car_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.ROOM_RM)) {
+            path = path + "/room_part.log";
+        }
         File masterRecord = new File(path);
         masterRecord.delete();
         try {
@@ -106,7 +114,15 @@ public class DiskOperator {
 
     public boolean writeLogRecord(String record) {
         String path = getJarDirectoryPath();
-        path = path + "/logRecord.log";
+        if (TCPServer.serverType.equals(TCPServer.MIDDLEWARE)) {
+            path = path + "/cord.log";
+        } else if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            path = path + "/flight_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            path = path + "/car_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.ROOM_RM)) {
+            path = path + "/room_part.log";
+        }
         File masterRecord = new File(path);
         FileWriter writer = null;
         BufferedWriter bw = null;
@@ -125,9 +141,17 @@ public class DiskOperator {
 
     public String readLogRecord() {
         String path = getJarDirectoryPath();
-        path = path + "/logRecord.log";
+        if (TCPServer.serverType.equals(TCPServer.MIDDLEWARE)) {
+            path = path + "/cord.log";
+        } else if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            path = path + "/flight_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            path = path + "/car_part.log";
+        } else if (TCPServer.serverType.equals(TCPServer.ROOM_RM)) {
+            path = path + "/room_part.log";
+        }
         File masterRecord = new File(path);
-        if(!masterRecord.exists()) {
+        if (!masterRecord.exists()) {
             try {
                 masterRecord.createNewFile();
                 return "";

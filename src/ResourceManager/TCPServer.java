@@ -56,6 +56,7 @@ public class TCPServer implements Runnable {
 
     private void loadPersistentData() throws IOException, ClassNotFoundException {
         String masterRecord = diskOperator.readMasterRecord();
+        Trace.info("loaded shadow" + masterRecord);
         if (masterRecord.contains("A")) {
             if (serverType.equals(MIDDLEWARE)) {
                 m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
@@ -77,7 +78,7 @@ public class TCPServer implements Runnable {
                 m_itemHT_room = (RMHashtable) diskOperator.getDataFromDisk("roomB");
             }
         } else if (masterRecord.equals("")) {
-            //do nothing
+            // no previous record, do nothing
         }
     }
 
