@@ -653,8 +653,8 @@ public class Client {
                         System.out.println("successfully crashed site " + arguments.elementAt(1));
                     } else {
                         System.out.println("unknown site, cannot crash it");
-
-                    break;}
+                    }
+                    break;
                 default:
                     System.out.println("The interface does not support this command.");
                     break;

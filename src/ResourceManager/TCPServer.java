@@ -45,43 +45,116 @@ public class TCPServer implements Runnable {
         if (serverType.equals(MIDDLEWARE)) {
             readRMAddresses();
             lm = new LockManager();
+            try {
+                loadPersistentData();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        } else {
+            //todo: recovery for RM
         }
-        try {
-            loadPersistentData();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
+
     }
 
     //todo: implement recovery
     //todo: figure out why loading after commit mess up the state
     private void loadPersistentData() throws IOException, ClassNotFoundException {
         String masterRecord = diskOperator.readMasterRecord();
-        if (masterRecord.contains("A")) {
-            if (serverType.equals(MIDDLEWARE)) {
-                Trace.info("loaded shadow" + masterRecord);
-                m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
-                LoaderRunnable loaderRunnable = new LoaderRunnable();
-                loaderRunnable.toFlight.println("loadA");
-                loaderRunnable.toCar.println("loadA");
-                loaderRunnable.toRoom.println("loadA");
+        if (masterRecord.contains("A"))
+            masterRecord = "A";
+        else if (masterRecord.contains("B"))
+            masterRecord = "B";
+        String cordLog = diskOperator.readLogRecord();
 
+//        if (masterRecord.contains("A") && cordLog.contains("COMMITA")) {
+//            Trace.info("loaded shadow" + masterRecord);
+//            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
+//            LoaderRunnable loaderRunnable = new LoaderRunnable();
+//            loaderRunnable.toFlight.println("loadA");
+//            loaderRunnable.toCar.println("loadA");
+//            loaderRunnable.toRoom.println("loadA");
+//        } else if (masterRecord.contains("B") && cordLog.contains("COMMITB")) {
+//            Trace.info("loaded shadow" + masterRecord);
+//            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerB");
+//            LoaderRunnable loaderRunnable = new LoaderRunnable();
+//            loaderRunnable.toFlight.println("loadB");
+//            loaderRunnable.toCar.println("loadB");
+//            loaderRunnable.toRoom.println("loadB");
+//        } else if (masterRecord.contains("A") && cordLog.contains("COMMITB")) {
+//            Trace.info("loaded shadow" + masterRecord);
+//            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
+//            LoaderRunnable loaderRunnable = new LoaderRunnable();
+//            loaderRunnable.toFlight.println("loadA");
+//            loaderRunnable.toCar.println("loadA");
+//            loaderRunnable.toRoom.println("loadA");
+//        } else if (masterRecord.contains("B") && cordLog.contains("COMMITA")) {
+//            Trace.info("loaded shadow" + masterRecord);
+//            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerA");
+//            LoaderRunnable loaderRunnable = new LoaderRunnable();
+//            loaderRunnable.toFlight.println("loadA");
+//            loaderRunnable.toCar.println("loadA");
+//            loaderRunnable.toRoom.println("loadA");
+//        }
 
-            }
-        } else if (masterRecord.contains("B")) {
-            if (serverType.equals(MIDDLEWARE)) {
-                Trace.info("loaded shadow" + masterRecord);
-                m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customerB");
-                LoaderRunnable loaderRunnable = new LoaderRunnable();
-                loaderRunnable.toFlight.println("loadB");
-                loaderRunnable.toCar.println("loadB");
-                loaderRunnable.toRoom.println("loadB");
-            }
-        } else if (masterRecord.equals("")) {
-            // no previous record, do nothing
+        if(masterRecord.equals("")) {
+            //do nothing
+        } else if (cordLog.equals("")) {
+            Trace.info("loaded shadow" + masterRecord);
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("START") && !cordLog.contains("COMMIT") && !cordLog.contains("ABORT")) {
+            Trace.info("loaded shadow" + masterRecord);
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("COMMITA") && masterRecord.contains("A")) {
+            Trace.info("loaded shadow" + masterRecord);
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("COMMITA") && masterRecord.contains("B")) {
+            Trace.info("loaded shadow" + "A");
+            diskOperator.writeMasterRecord("A");
+            masterRecord = "A";
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("COMMITB") && masterRecord.contains("B")) {
+            Trace.info("loaded shadow" + masterRecord);
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("COMMITB") && masterRecord.contains("A")) {
+            Trace.info("loaded shadow" + "A");
+            diskOperator.writeMasterRecord("A");
+            masterRecord = "A";
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
+        } else if (cordLog.contains("ABORT")) {
+            Trace.info("loaded shadow" + masterRecord);
+            m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
+            LoaderRunnable loaderRunnable = new LoaderRunnable();
+            loaderRunnable.toFlight.println("load" + masterRecord);
+            loaderRunnable.toCar.println("load" + masterRecord);
+            loaderRunnable.toRoom.println("load" + masterRecord);
         }
+
 
     }
 
