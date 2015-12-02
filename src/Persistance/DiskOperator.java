@@ -139,6 +139,41 @@ public class DiskOperator {
         return true;
     }
 
+    public String readMWAddress() {
+        String path = getJarDirectoryPath();
+        path = path + "/MWLocation.txt";
+        File masterRecord = new File(path);
+        if (!masterRecord.exists()) {
+            try {
+                masterRecord.createNewFile();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        } else {
+
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(masterRecord);
+                byte[] data = new byte[(int) masterRecord.length()];
+                fis.read(data);
+                fis.close();
+                String str = new String(data, "UTF-8");
+                return str;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return "";
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+                return "";
+            } catch (IOException e) {
+                e.printStackTrace();
+                return "";
+            }
+        }
+    }
+
     public String readLogRecord() {
         String path = getJarDirectoryPath();
         if (TCPServer.serverType.equals(TCPServer.MIDDLEWARE)) {

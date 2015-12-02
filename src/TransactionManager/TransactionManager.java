@@ -497,7 +497,6 @@ public class TransactionManager implements ResourceManager {
 //            } catch (IOException e) {
 //                e.printStackTrace();
 //            }
-            System.out.println("GGOOOOOOOOOOOOT HEEEEEEEEEEEEEEEEEEEEEEEEEEEERE");
 
             Trace.info("commit saved to shadow" + shadowVersion);
             t_itemHT_room.clear();

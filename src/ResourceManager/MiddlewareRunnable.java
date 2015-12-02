@@ -20,42 +20,61 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
     Socket carSocket = null;
     Socket flightSocket = null;
     Socket roomSocket = null;
-    public PrintWriter toCar, toFlight, toRoom, toClient;
-    public BufferedReader fromCar, fromFlight, fromRoom, fromClient;
+    public PrintWriter toCar = null, toFlight = null, toRoom = null, toClient = null;
+    public BufferedReader fromCar = null, fromFlight = null, fromRoom = null, fromClient = null;
     TransactionManager tm;
 
     public MiddlewareRunnable(Socket clientSocket) {
         this.clientSocket = clientSocket;
         tm = new TransactionManager(this);
-        connectRM();
-        setComms();
+        if(connectRM())
+            setComms();
+        else
+            setCommsForRecovery();
+
+    }
+
+    private void setCommsForRecovery() {
+        try {
+            toClient = new PrintWriter(clientSocket.getOutputStream(), true);
+            fromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            Trace.info("a RM client connected for RM recovery");
+        } catch (IOException e) {
+            Trace.info("Cannot establish comms with a client");
+        }
     }
 
     private void setComms() {
         try {
             toClient = new PrintWriter(clientSocket.getOutputStream(), true);
+            fromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+        } catch (IOException e) {
+            Trace.info("Cannot establish comms with a client");
+        }
+        try {
             toCar = new PrintWriter(carSocket.getOutputStream(), true);
             toFlight = new PrintWriter(flightSocket.getOutputStream(), true);
             toRoom = new PrintWriter(roomSocket.getOutputStream(), true);
-            fromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             fromCar = new BufferedReader(new InputStreamReader(carSocket.getInputStream()));
             fromFlight = new BufferedReader(new InputStreamReader(flightSocket.getInputStream()));
             fromRoom = new BufferedReader(new InputStreamReader(roomSocket.getInputStream()));
         } catch (IOException e) {
-            Trace.info("Cannot establish comms with an end-user client or with one of the RMs");
+            Trace.info("Cannot establish comms with one of the RMs");
         }
     }
 
-    private void connectRM() {
+    private boolean connectRM() {
         try {
             this.flightSocket = new Socket(TCPServer.rmAddresses[0], Integer.parseInt(TCPServer.rmAddresses[1]));
 
             this.carSocket = new Socket(TCPServer.rmAddresses[2], Integer.parseInt(TCPServer.rmAddresses[3]));
 
             this.roomSocket = new Socket(TCPServer.rmAddresses[4], Integer.parseInt(TCPServer.rmAddresses[5]));
-
+            return true;
         } catch (IOException e) {
             Trace.info("Cannot connect to all 3 mandatory RMs");
+            return false;
         }
     }
 
@@ -365,6 +384,13 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
                         } else
                             ;
                         break;
+                    case 68:
+                        if(cmdWords.length !=1) {
+                            toClient.println("ERROR : wrong arguments");
+                            break;
+                        }
+                        toClient.println(TCPServer.diskOperator.readMasterRecord());
+                        break;
                     default:
                         toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
                         break;
@@ -444,6 +470,8 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
             return 66;
         else if (cmdWords[0].compareToIgnoreCase("crash") == 0)
             return 67;
+        else if (cmdWords[0].compareToIgnoreCase("master") == 0)
+            return 68;
         else
             choice = -1;
         return choice;

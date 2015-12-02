@@ -53,9 +53,67 @@ public class TCPServer implements Runnable {
                 e.printStackTrace();
             }
         } else {
-            //todo: recovery for RM
+            loadPersistentDataRM();
         }
 
+    }
+
+    private void loadPersistentDataRM() {
+        String mwAddress = diskOperator.readMWAddress();
+        if(mwAddress == "") {
+
+        } else {
+            String[] mwAdd = mwAddress.split(" ");
+            try {
+                RMRecoveryClient rClient = new RMRecoveryClient(mwAdd[0], Integer.parseInt(mwAdd[1]));
+                String shadowCopy = rClient.getShadowCopy();
+
+                if (shadowCopy.equals("")) {
+                    //no shadow copy, do nothing
+                } else {
+                    String shadowVersion = "";
+                    if (shadowCopy.contains("A"))
+                        shadowVersion = "A";
+                    else if (shadowCopy.contains("B"))
+                        shadowVersion = "B";
+                    else {
+                    }
+
+                    if (TCPServer.serverType.equals("FLIGHT_RM")) {
+                        try {
+                            TCPServer.m_itemHT_flight = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("flight" + shadowVersion);
+                            Trace.info("FLIGHT_RM RECOVERED shadowVersion" + shadowVersion);
+                        } catch (IOException e) {
+                            Trace.error("Could not recover shadowVersion" + shadowVersion);
+                        } catch (ClassNotFoundException e) {
+                        }
+                    } else if (TCPServer.serverType.equals("CAR_RM")) {
+                        try {
+                            TCPServer.m_itemHT_car = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("car" + shadowVersion);
+                            Trace.info("CAR_RM RECOVERED shadowVersion" + shadowVersion);
+
+                        } catch (IOException e) {
+                            Trace.error("Could not recover shadowVersion" + shadowVersion);
+                        } catch (ClassNotFoundException e) {
+                        }
+                    } else if (TCPServer.serverType.equals("ROOM_RM")) {
+                        try {
+                            TCPServer.m_itemHT_room = (RMHashtable) TCPServer.diskOperator.getDataFromDisk("room" + shadowVersion);
+                            Trace.info("ROOM_RM RECOVERED shadowVersion" + shadowVersion);
+
+                        } catch (IOException e) {
+                            Trace.error("Could not recover shadowVersion" + shadowVersion);
+                        } catch (ClassNotFoundException e) {
+                        }
+                    }
+                }
+                rClient.disconnect();
+            } catch (IOException e) {
+                Trace.error("mw is not up, therefore there is nothing to recover");
+            }
+
+
+        }
     }
 
     //todo: implement recovery
