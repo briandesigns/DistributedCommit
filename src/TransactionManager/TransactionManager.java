@@ -176,7 +176,6 @@ public class TransactionManager implements ResourceManager {
 
     }
 
-    //todo: should it time out here if rm don't respond?
     public boolean abort() {
         stopTTLCountDown();
         String masterRecord = TCPServer.diskOperator.readMasterRecord();
@@ -186,7 +185,7 @@ public class TransactionManager implements ResourceManager {
             } catch (IOException e) {
                 e.printStackTrace();
                 Trace.error("failed to recover previous state from stable storage, deleting all data");
-                TCPServer.m_itemHT_customer = new RMHashtable();
+                TCPServer.m_itemHT_customer.clear();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -215,7 +214,7 @@ public class TransactionManager implements ResourceManager {
             } catch (IOException e) {
                 e.printStackTrace();
                 Trace.error("failed to recover previous state from stable storage, deleting all data");
-                TCPServer.m_itemHT_customer = new RMHashtable();
+                TCPServer.m_itemHT_customer.clear();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -238,12 +237,12 @@ public class TransactionManager implements ResourceManager {
                 e.printStackTrace();
             }
         }
-        t_itemHT_room = new RMHashtable();
-        t_itemHT_car = new RMHashtable();
-        t_itemHT_flight = new RMHashtable();
-        t_itemHT_customer = new RMHashtable();
+        t_itemHT_room.clear();
+        t_itemHT_car.clear();
+        t_itemHT_flight.clear();
+        t_itemHT_customer.clear();
         setInTransaction(false);
-        System.out.println("txn: " + this.currentActiveTransactionID + " abort successfull");
+        System.out.println("txn: " + this.currentActiveTransactionID + " abort successful");
         transactionTable.remove(this.currentActiveTransactionID);
         TCPServer.lm.UnlockAll(currentActiveTransactionID);
         currentActiveTransactionID = UNUSED_TRANSACTION_ID;
@@ -1173,7 +1172,6 @@ public class TransactionManager implements ResourceManager {
         }
         return reservableItemUpdated;
     }
-    //todo: for each method check that it knows how to handle the case where there is a delete and localCopy got count or reservations set to -1 or null or something
 
     @Override
     public String queryCustomerInfo(int id, int customerId) {

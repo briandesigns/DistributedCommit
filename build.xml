@@ -1,4 +1,4 @@
-<project>
+<project basedir=".">
     <target name="run-flight">
         <java jar="out/artifacts/TCPServer_jar/part2.jar" fork="true">
             <arg value="FLIGHT_RM"/>
@@ -33,7 +33,14 @@
             <ARG value="8080"/>
         </java>
     </target>
-
+    <target name="run-clean">
+        <delete>
+            <fileset dir="${basedir}/out/artifacts/TCPServer_jar/" includes="*.log"/>
+        </delete>
+        <delete>
+            <fileset dir="${basedir}/out/artifacts/TCPServer_jar/" includes="*.ser"/>
+        </delete>
+    </target>
     <target name="run">
         <antcall target="run-flight"/>
         <antcall target="run-car"/>
@@ -41,5 +48,6 @@
         <antcall target="run-middleware"/>
         <antcall target="run-client"/>
         <antcall target="run-client"/>
+        <antcall target="run-clean"/>
     </target>
 </project>

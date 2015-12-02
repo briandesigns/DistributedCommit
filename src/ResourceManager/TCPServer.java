@@ -109,15 +109,14 @@ public class TCPServer implements Runnable {
                 }
                 rClient.disconnect();
             } catch (IOException e) {
-                Trace.error("mw is not up, therefore there is nothing to recover");
+                Trace.info("mw is not up, therefore there is nothing to recover");
             }
 
 
         }
     }
 
-    //todo: implement recovery
-    //todo: figure out why loading after commit mess up the state
+
     private void loadPersistentData() throws IOException, ClassNotFoundException {
         String masterRecord = diskOperator.readMasterRecord();
         if (masterRecord.contains("A"))

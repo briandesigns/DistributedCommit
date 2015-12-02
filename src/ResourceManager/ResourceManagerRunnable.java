@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Calendar;
 import java.util.Enumeration;
+import java.util.Set;
 import java.util.Vector;
 
 /**
@@ -18,19 +19,11 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     Socket clientSocket = null;
     PrintWriter toClient;
     BufferedReader fromClient;
-    RMHashtable hashTable;
     TransactionManager tm;
 
 
     public ResourceManagerRunnable(Socket clientSocket, String serverType) {
         this.clientSocket = clientSocket;
-        if (serverType.equals(TCPServer.ROOM_RM)) {
-            hashTable = TCPServer.m_itemHT_room;
-        } else if (serverType.equals(TCPServer.FLIGHT_RM)) {
-            hashTable = TCPServer.m_itemHT_flight;
-        } else {
-            hashTable = TCPServer.m_itemHT_car;
-        }
         setComms();
     }
 
@@ -600,10 +593,6 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             Flight newObj = new Flight(Integer.parseInt(key.replace(TransactionManager.FLIGHT, "")), numItem, price);
             newObj.setReserved(numReserved);
             writeData(id, key, newObj);
-            Flight savedData = (Flight) readData(id, key);
-            Trace.info("reading from mainmemory: flight," + savedData.getKey() + ",count:" + savedData.getCount() +
-                    "," +
-                    savedData.getPrice() + ",reserved:" + savedData.getReserved());
         } else if (key.contains(TransactionManager.CAR)) {
             Car newObj = new Car(key.replace(TransactionManager.CAR, ""), numItem, price);
             newObj.setReserved(numReserved);
@@ -620,6 +609,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
 
     // Read a data item.
     public RMItem readData(int id, String key) {
+        RMHashtable hashTable;
+        if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            hashTable = TCPServer.m_itemHT_flight;
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            hashTable = TCPServer.m_itemHT_car;
+        } else
+            hashTable = TCPServer.m_itemHT_room;
         synchronized (hashTable) {
             return (RMItem) hashTable.get(key);
         }
@@ -627,6 +623,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
 
     // Write a data item.
     public void writeData(int id, String key, RMItem value) {
+        RMHashtable hashTable;
+        if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            hashTable = TCPServer.m_itemHT_flight;
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            hashTable = TCPServer.m_itemHT_car;
+        } else
+            hashTable = TCPServer.m_itemHT_room;
         synchronized (hashTable) {
             hashTable.put(key, value);
         }
@@ -634,6 +637,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
 
     // Remove the item out of storage.
     public RMItem removeData(int id, String key) {
+        RMHashtable hashTable;
+        if (TCPServer.serverType.equals(TCPServer.FLIGHT_RM)) {
+            hashTable = TCPServer.m_itemHT_flight;
+        } else if (TCPServer.serverType.equals(TCPServer.CAR_RM)) {
+            hashTable = TCPServer.m_itemHT_car;
+        } else
+            hashTable = TCPServer.m_itemHT_room;
         synchronized (hashTable) {
             return (RMItem) hashTable.remove(key);
         }

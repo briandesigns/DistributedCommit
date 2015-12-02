@@ -35,8 +35,6 @@ public class RMRecoveryClient {
         try {
             shadowCopy = fromMW.readLine();
             Trace.info("shadow copy obtained form mw:" + shadowCopy);
-            System.out.println("GOOOOOOOOOOOOT HEREEEEEEEEEEEEEEEEE");
-
         } catch (IOException e) {
             Trace.error("cannot communicate with mw for recovery purposees");
             shadowCopy = "";
