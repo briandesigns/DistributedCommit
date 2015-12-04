@@ -65,6 +65,8 @@ public class TCPServer implements Runnable {
         } else {
             String[] mwAdd = mwAddress.split(" ");
             try {
+                System.out.println(mwAdd[0]);
+                System.out.println(mwAdd[1]);
                 RMRecoveryClient rClient = new RMRecoveryClient(mwAdd[0], Integer.parseInt(mwAdd[1]));
                 String shadowCopy = rClient.getShadowCopy();
 
