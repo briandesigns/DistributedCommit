@@ -10,7 +10,6 @@ import ResourceManager.MiddlewareRunnable;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
 
 public class TransactionManager implements ResourceManager {
     public static Hashtable<Integer, boolean[]> transactionTable;
@@ -32,6 +31,85 @@ public class TransactionManager implements ResourceManager {
     public RMHashtable t_itemHT_car;
     public RMHashtable t_itemHT_room;
 
+    private boolean MWDieBeforeVoteRequest = false;
+    private boolean MWDieAfterVoteRequest = false;
+    private boolean MWDieAfterSomeReplies = false;
+    private boolean MWDieBeforeDecision = false;
+    private boolean MWDieAfterDecision = false;
+    private boolean MWDieAfterSendingSomeDecisions = false;
+    private boolean MWDieAfterSendingAllDecisions = false;
+
+
+
+    public void setMWDieBeforeVoteRequest() {
+        this.MWDieBeforeVoteRequest = true;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieAfterVoteRequest() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = true;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieAfterSomeReplies() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = true;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieBeforeDecision() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = true;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieAfterDecision() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = true;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieAfterSendingSomeDecisions() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = true;
+        MWDieAfterSendingAllDecisions = false;
+    }
+
+    public void setMWDieAfterSendingAllDecisions() {
+        this.MWDieBeforeVoteRequest = false;
+        this.MWDieAfterVoteRequest = false;
+        this.MWDieAfterSomeReplies = false;
+        MWDieBeforeDecision = false;
+        MWDieAfterDecision = false;
+        MWDieAfterSendingSomeDecisions = false;
+        MWDieAfterSendingAllDecisions = true;
+    }
 
     {
         transactionTable = new Hashtable<Integer, boolean[]>();
@@ -275,6 +353,14 @@ public class TransactionManager implements ResourceManager {
             Flight localFlight = (Flight) t_itemHT_flight.get(key);
             myMWRunnable.toFlight.println("writecompletedata" + "," + getCurrentActiveTransactionID() + "," + key
                     + "," + localFlight.getCount() + "," + localFlight.getPrice() + "," + localFlight.getReserved());
+
+            //@crash
+            if (MWDieAfterVoteRequest) {
+                Trace.info("shutting down MW after sending vote request");
+                System.exit(0);
+            }
+
+
             try {
                 String response = myMWRunnable.fromFlight.readLine();
                 if (response == null) {
@@ -285,6 +371,9 @@ public class TransactionManager implements ResourceManager {
                     Trace.error("response received from FLIGHT RM, but it failed to merge change to memory");
                     success = false;
                 }
+
+
+
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -298,6 +387,11 @@ public class TransactionManager implements ResourceManager {
                 String response = myMWRunnable.fromFlight.readLine();
                 if (response == null) {
                     Trace.error("cannot get response, FLIGHT RM timed out during disk write phase of prepare");
+                    //@crash
+                    if (MWDieAfterSomeReplies) {
+                        Trace.info("shutting down MW after receiving some but not all replies");
+                        System.exit(0);
+                    }
                     return false;
                 }
                 if (response.contains("false")) {
@@ -308,6 +402,11 @@ public class TransactionManager implements ResourceManager {
                 Trace.error("failed to write main memory to disk for Flight RM");
                 success = false;
             }
+        }
+        //@crash
+        if (MWDieAfterSomeReplies) {
+            Trace.info("shutting down MW after receiving some but not all replies");
+            System.exit(0);
         }
         return success;
     }
@@ -381,7 +480,7 @@ public class TransactionManager implements ResourceManager {
             myMWRunnable.toRoom.println("write" + shadowVersion);
             try {
                 String response = myMWRunnable.fromRoom.readLine();
-                if(response == null) {
+                if (response == null) {
                     Trace.error("cannot get response, CAR RM timed out during disk write phase of prepare");
                     return false;
                 }
@@ -409,6 +508,7 @@ public class TransactionManager implements ResourceManager {
                 flightReady[0] = mergeFlights(shadowVersion);
             }
         }).start();
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -421,6 +521,9 @@ public class TransactionManager implements ResourceManager {
                 roomReady[0] = mergeRooms(shadowVersion);
             }
         }).start();
+
+
+
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -435,6 +538,13 @@ public class TransactionManager implements ResourceManager {
             }
         }
         boolean success = true;
+
+        //@crash
+        if (MWDieBeforeDecision) {
+            Trace.info("shutting down MW after receiving all replies but before deciding");
+            System.exit(0);
+        }
+
         if (!flightReady[0] || !carReady[0] || !roomReady[0] || !customerReady[0]) success = false;
         return success;
     }
@@ -461,6 +571,12 @@ public class TransactionManager implements ResourceManager {
             TCPServer.diskOperator.clearLogRecord();
             TCPServer.diskOperator.writeLogRecord("START,");
 
+            //@crash
+            if (MWDieBeforeVoteRequest) {
+                Trace.info("shutting down MW die after receiving some but not all replies");
+                System.exit(0);
+            }
+
             if (!prepare(shadowVersion)) {
                 Trace.error("failed to merge local copy with main memory copy and creating before/after image. " +
                         "aborting");
@@ -468,7 +584,13 @@ public class TransactionManager implements ResourceManager {
                 abort();
                 return false;
             }
-            TCPServer.diskOperator.writeLogRecord("COMMIT"+shadowVersion);
+            TCPServer.diskOperator.writeLogRecord("COMMIT" + shadowVersion);
+
+            //@crash
+            if (MWDieAfterDecision) {
+                Trace.info("shutting down MW after decision but before sending decision");
+                System.exit(0);
+            }
             boolean success2 = TCPServer.diskOperator.writeMasterRecord(shadowVersion + getCurrentActiveTransactionID());
             if (!success2) {
                 Trace.error("could not write master record. aborting");
@@ -477,25 +599,40 @@ public class TransactionManager implements ResourceManager {
                 TCPServer.diskOperator.writeLogRecord("ABORT");
                 abort();
             }
-//
-//            myMWRunnable.toFlight.println("commit" + shadowVersion);
-//            try {
-//                myMWRunnable.fromFlight.readLine();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            myMWRunnable.toCar.println("commit" + shadowVersion);
-//            try {
-//                myMWRunnable.fromCar.readLine();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            myMWRunnable.toRoom.println("commit" + shadowVersion);
-//            try {
-//                myMWRunnable.fromRoom.readLine();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
+
+            myMWRunnable.toFlight.println("commit" + shadowVersion);
+            try {
+                myMWRunnable.fromFlight.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            myMWRunnable.toCar.println("commit" + shadowVersion);
+            try {
+                myMWRunnable.fromCar.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            //@crash
+            if (MWDieAfterSendingSomeDecisions) {
+                Trace.info("shutting down MW after sending some but not all decisions");
+                System.exit(0);
+            }
+
+
+            myMWRunnable.toRoom.println("commit" + shadowVersion);
+            try {
+                myMWRunnable.fromRoom.readLine();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            //@crash
+            if (MWDieAfterSendingAllDecisions) {
+                Trace.info("shutting down MW after sending all decisions");
+                System.exit(0);
+            }
+
 
             Trace.info("commit saved to shadow" + shadowVersion);
             t_itemHT_room.clear();

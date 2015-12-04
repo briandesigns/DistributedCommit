@@ -9,7 +9,6 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Calendar;
 import java.util.Enumeration;
-import java.util.Set;
 import java.util.Vector;
 
 /**
@@ -21,6 +20,41 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
     BufferedReader fromClient;
     TransactionManager tm;
 
+    public boolean RMDieAfterRequest = false;
+    public boolean RMDieAfterDecision = false;
+    public boolean RMDieAfterSendAnswer = false;
+    public boolean RMDieBeforeCommitAbort = false;
+
+
+    public void setRMDieAfterRequest() {
+        RMDieAfterRequest = true;
+        RMDieAfterDecision = false;
+        RMDieAfterSendAnswer = false;
+        RMDieBeforeCommitAbort = false;
+    }
+
+    public void setRMDieAfterDecision() {
+        RMDieAfterRequest = false;
+        RMDieAfterDecision = true;
+        RMDieAfterSendAnswer = false;
+        RMDieBeforeCommitAbort = false;
+    }
+
+    public void setRMDieAfterSendAnswer() {
+        RMDieAfterRequest = false;
+        RMDieAfterDecision = false;
+        RMDieAfterSendAnswer = true;
+        RMDieBeforeCommitAbort = false;
+    }
+
+    public void setRMDieBeforeCommitAbort() {
+        RMDieAfterRequest = false;
+        RMDieAfterDecision = false;
+        RMDieAfterSendAnswer = false;
+        RMDieBeforeCommitAbort = true;
+    }
+    
+    
 
     public ResourceManagerRunnable(Socket clientSocket, String serverType) {
         this.clientSocket = clientSocket;
@@ -326,6 +360,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                                 toClient.println("ERROR: wrong arguments");
                                 break;
                             }
+
+                            //@crash
+                            if (RMDieBeforeCommitAbort) {
+                                Trace.error("RM die after receiving decision but before commit/abort");
+                                System.exit(0);
+                            }
+
                             if (cmdWords[0].contains("abortA")) {
                                 success = loadMemoryFromDisk("A");
                             } else if (cmdWords[0].contains("abortB")) {
@@ -355,6 +396,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             } else {
                                 toClient.println("false");
                             }
+
+                            //@crash
+                            if (RMDieAfterSendAnswer) {
+                                Trace.error("RM die after deciding but before sending answer");
+                                System.exit(0);
+                            }
+
                             break;
                         case 65:
                             if (cmdWords.length < 6) {
@@ -368,22 +416,28 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             System.exit(0);
                             break;
                         case 67:
+                            //@crash
+                            if (RMDieBeforeCommitAbort) {
+                                Trace.error("RM die after receiving decision but before commit/abort");
+                                System.exit(0);
+                            }
+
                             if(cmdWords[0].equalsIgnoreCase("commita")) {
-//                                success = loadMemoryFromDisk("A");
-//                                if (success) {
+                                success = loadMemoryFromDisk("A");
+                                if (success) {
                                     TCPServer.diskOperator.writeLogRecord("COMMIT");
                                     toClient.println("true");
-//                                } else {
-//                                    toClient.println("false");
-//                                }
+                                } else {
+                                    toClient.println("false");
+                                }
                             } else if (cmdWords[0].equalsIgnoreCase("commitb")) {
-//                                success = loadMemoryFromDisk("B");
-//                                if (success) {
+                                success = loadMemoryFromDisk("B");
+                                if (success) {
                                     TCPServer.diskOperator.writeLogRecord("COMMIT");
                                     toClient.println("true");
-//                                } else {
-//                                    toClient.println("false");
-//                                }
+                                } else {
+                                    toClient.println("false");
+                                }
                             }
                             break;
                         case 68:
@@ -396,6 +450,26 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
                             } else if (cmdWords[0].contains("loadB")) {
                                 success = loadMemoryFromDisk("B");
                             } else success = false;
+                            break;
+                        case 69:
+                            if (cmdWords[0].equals("rmdieafterrequest")) {
+                                setRMDieAfterRequest();
+                                Trace.warn("rm will die after receiving vote request but before sending an answer");
+                            }
+                            else if (cmdWords[0].equals("rmdieafterdecision")) {
+                                setRMDieAfterDecision();
+                                Trace.warn("rm will die after making a decision on preparedness but before sending an" +
+                                        " answer");
+
+                            }
+                            else if (cmdWords[0].equals("rmdieaftersendanswer")) {
+                                setRMDieAfterSendAnswer();
+                                Trace.warn("rm will die after sending an answer");
+                            }
+                            else if (cmdWords[0].equals("rmdiebeforecommitabort")) {
+                                setRMDieBeforeCommitAbort();
+                                Trace.warn("rm will die after receiving decision but before executing decision");
+                            }
                             break;
                         default:
                             toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
@@ -461,27 +535,70 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_flight, "flight" + shadowVersion);
                 TCPServer.diskOperator.writeLogRecord("YES,");
+
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
+
+
                 return true;
             } catch (IOException e) {
                 TCPServer.diskOperator.writeLogRecord("ABORT");
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
                 return false;
             }
         } else if (TCPServer.serverType.equals("CAR_RM")) {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_car, "car" + shadowVersion);
                 TCPServer.diskOperator.writeLogRecord("YES,");
+
+
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
+
                 return true;
             } catch (IOException e) {
                 TCPServer.diskOperator.writeLogRecord("ABORT");
+
+
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
+
                 return false;
             }
         } else if (TCPServer.serverType.equals("ROOM_RM")) {
             try {
                 TCPServer.diskOperator.writeDataToDisk(TCPServer.m_itemHT_room, "room" + shadowVersion);
                 TCPServer.diskOperator.writeLogRecord("YES,");
+
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
+
                 return true;
             } catch (IOException e) {
                 TCPServer.diskOperator.writeLogRecord("ABORT");
+
+                //@crash
+                if (RMDieAfterDecision) {
+                    Trace.error("RM die after deciding but before sending answer");
+                    System.exit(0);
+                }
+
                 return false;
             }
         }
@@ -580,6 +697,8 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
             choice  = 68;
         else if (cmdWords[0].compareToIgnoreCase("loadb") == 0)
             choice = 68;
+        else if (cmdWords[0].contains("rmdie"))
+            choice = 69;
         else
             choice = -1;
         return choice;
@@ -587,6 +706,13 @@ public class ResourceManagerRunnable implements Runnable, ResourceManager {
 
     private void writeCompleteData(int id, String key,
                                    int numItem, int price, int numReserved) {
+
+        //@crash
+        if (RMDieAfterRequest) {
+            Trace.error("RM die after receiving vote request but before preparing");
+            System.exit(0);
+        }
+
         if (numItem == -1) {
             removeData(id, key);
         } else if (key.contains(TransactionManager.FLIGHT)) {

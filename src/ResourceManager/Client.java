@@ -645,15 +645,10 @@ public class Client {
                     }
                     break;
                 case 67:
-                    if (((String) arguments.elementAt(1)).equalsIgnoreCase("flight") ||
-                            ((String) arguments.elementAt(1)).equalsIgnoreCase("car") ||
-                            ((String) arguments.elementAt(1)).equalsIgnoreCase("room") ||
-                            ((String) arguments.elementAt(1)).equalsIgnoreCase("mw")) {
-                        toMW.println(arguments.elementAt(0) + "," + arguments.elementAt(1));
-                        System.out.println("successfully crashed site " + arguments.elementAt(1));
-                    } else {
-                        System.out.println("unknown site, cannot crash it");
-                    }
+                    toMW.println(arguments.elementAt(0) + "," + arguments.elementAt(1));
+                    break;
+                case 68:
+                    toMW.println(arguments.elementAt(0));
                     break;
                 default:
                     System.out.println("The interface does not support this command.");
@@ -727,8 +722,10 @@ public class Client {
             return 25;
         else if (argument.compareToIgnoreCase("shutdown") == 0)
             return 66;
-        else if (argument.compareToIgnoreCase("crash") == 0)
+        else if (argument.contains("rmdie"))
             return 67;
+        else if (argument.contains("mwdie"))
+            return 68;
         else
             return 666;
     }

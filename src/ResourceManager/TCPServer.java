@@ -195,9 +195,9 @@ public class TCPServer implements Runnable {
             loaderRunnable.toCar.println("load" + masterRecord);
             loaderRunnable.toRoom.println("load" + masterRecord);
         } else if (cordLog.contains("COMMITB") && masterRecord.contains("A")) {
-            Trace.info("loaded shadow" + "A");
-            diskOperator.writeMasterRecord("A");
-            masterRecord = "A";
+            Trace.info("loaded shadow" + "B");
+            diskOperator.writeMasterRecord("B");
+            masterRecord = "B";
             m_itemHT_customer = (RMHashtable) diskOperator.getDataFromDisk("customer" + masterRecord);
             LoaderRunnable loaderRunnable = new LoaderRunnable();
             loaderRunnable.toFlight.println("load" + masterRecord);

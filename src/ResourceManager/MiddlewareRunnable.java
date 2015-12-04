@@ -27,7 +27,7 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
     public MiddlewareRunnable(Socket clientSocket) {
         this.clientSocket = clientSocket;
         tm = new TransactionManager(this);
-        if(connectRM())
+        if (connectRM())
             setComms();
         else
             setCommsForRecovery();
@@ -369,27 +369,49 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
                         }
                         break;
                     case 67:
-                        if (cmdWords.length != 2) {
+                        if (cmdWords.length != 1) {
                             toClient.println("ERROR : wrong arguments");
                             break;
                         }
-                        if (cmdWords[1].equals("flight")) {
-                            toFlight.println("destruct");
-                        } else if (cmdWords[1].equals("car")) {
-                            toCar.println("destruct");
-                        } else if (cmdWords[1].equals("room")) {
-                            toRoom.println("destruct");
-                        } else if (cmdWords[1].equals("mw")) {
-                            System.exit(0);
-                        } else
-                            ;
+                        if (cmdWords[0].equals("mwdiebeforevoterequest")) {
+                            tm.setMWDieBeforeVoteRequest();
+                            Trace.warn("mw will die before sending vote request");
+                        } else if (cmdWords[0].equals("mwdieaftervoterequest")) {
+                            tm.setMWDieAfterVoteRequest();
+                            Trace.warn("mw will die before receving any vote request replies");
+                        } else if (cmdWords[0].equals("mwdieaftersomereplies")) {
+                            tm.setMWDieAfterSomeReplies();
+                            Trace.warn("mw will die after getting some vote request replies");
+                        } else if (cmdWords[0].equals("mwdiebeforedecision")) {
+                            tm.setMWDieBeforeDecision();
+                            Trace.warn("mw will die before deciding");
+                        } else if (cmdWords[0].equals("mwdieafterdecision")) {
+                            tm.setMWDieAfterDecision();
+                            Trace.warn("mw will die after making the decision");
+                        } else if (cmdWords[0].equals("mwdieaftersendingsomedecisions")) {
+                            tm.setMWDieAfterSendingSomeDecisions();
+                            Trace.warn("mw will die after sending some but not all decisions");
+                        } else if (cmdWords[0].equals("mwdieaftersendingalldecisions")) {
+                            tm.setMWDieAfterSendingAllDecisions();
+                            Trace.warn("mw will die after sending all decisions");
+                        }
                         break;
                     case 68:
-                        if(cmdWords.length !=1) {
+                        if (cmdWords.length != 1) {
                             toClient.println("ERROR : wrong arguments");
                             break;
                         }
                         toClient.println(TCPServer.diskOperator.readMasterRecord());
+                        break;
+                    case 69:
+                        if (cmdWords[1].equals("flight")) {
+                            toFlight.println(cmdWords[0]);
+                        } else if (cmdWords[1].equals("car")) {
+                            toCar.println(cmdWords[0]);
+                        } else if (cmdWords[1].equals("room")) {
+                            toRoom.println(cmdWords[0]);
+                        }
+
                         break;
                     default:
                         toClient.println("ERROR :  Command " + cmdWords[0] + " not supported");
@@ -468,10 +490,13 @@ public class MiddlewareRunnable implements Runnable, ResourceManager {
             return 25;
         else if (cmdWords[0].compareToIgnoreCase("shutdown") == 0)
             return 66;
-        else if (cmdWords[0].compareToIgnoreCase("crash") == 0)
+        else if (cmdWords[0].contains("mwdie"))
             return 67;
+        else if (cmdWords[0].contains("rmdie"))
+            return 69;
         else if (cmdWords[0].compareToIgnoreCase("master") == 0)
             return 68;
+
         else
             choice = -1;
         return choice;

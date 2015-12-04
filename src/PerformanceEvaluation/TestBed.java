@@ -9,6 +9,7 @@ public class TestBed {
     static ArrayList<Thread> clients = new ArrayList<Thread>();
     static Thread TestAClient;
     static final int NUMBER_OF_CLIENTS = 1000;
+
     public static void main(String[] args) {
         try {
 
@@ -20,11 +21,11 @@ public class TestBed {
             String mwHost = args[0];
             int mwPort = Integer.parseInt(args[1]);
             final String testType = args[2];
-             int waitTime=0;
+            int waitTime = 0;
             if (!(args[3] == null)) {
                 waitTime = Integer.parseInt(args[3]);
             }
-            int testTime =0;
+            int testTime = 0;
             if (!(args[4] == null)) {
                 testTime = Integer.parseInt(args[4]);
             }
@@ -44,10 +45,10 @@ public class TestBed {
 
     private static void startTestB(String mwHost, int mwPort, int waitTime, final int testTime) {
         final int time = waitTime;
-        for (int i = 0; i<NUMBER_OF_CLIENTS; i++) {
+        for (int i = 0; i < NUMBER_OF_CLIENTS; i++) {
             clients.add(new Thread(new TestClient(mwHost, mwPort, time)));
         }
-        for (int i=0; i<NUMBER_OF_CLIENTS; i++) {
+        for (int i = 0; i < NUMBER_OF_CLIENTS; i++) {
             clients.get(i).start();
         }
         new Thread(new Runnable() {
@@ -68,7 +69,7 @@ public class TestBed {
     }
 
     private static void startTestAPart1(final String mwHost, final int mwPort, final int testTime) {
-        TestAClient = new Thread(new TestClient(mwHost,mwPort,"single"));
+        TestAClient = new Thread(new TestClient(mwHost, mwPort, "single"));
         TestAClient.start();
 
         new Thread(new Runnable() {
@@ -87,7 +88,7 @@ public class TestBed {
     }
 
     private static void startTestAPart2(String mwHost, int mwPort, final int testTime) {
-        TestAClient = new Thread(new TestClient(mwHost, mwPort,"multi"));
+        TestAClient = new Thread(new TestClient(mwHost, mwPort, "multi"));
         TestAClient.start();
 
         new Thread(new Runnable() {
@@ -106,14 +107,15 @@ public class TestBed {
     }
 
     private static void endTestB(String testType) {
-        for (int i = 0; i<clients.size(); i++ ) {
+        for (int i = 0; i < clients.size(); i++) {
             clients.get(i).interrupt();
         }
         DataStorage.writeDataToFile(testType);
     }
+
     private static void endTestAPart1(String testType) {
-            TestAClient.interrupt();
-            DataStorage.writeDataToFile(testType);
+        TestAClient.interrupt();
+        DataStorage.writeDataToFile(testType);
 
     }
 
